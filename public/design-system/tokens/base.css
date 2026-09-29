@@ -1,0 +1,157 @@
+/* ============================================================
+   The/Nudge — Base element defaults
+   Light, non-invasive resets that put the brand voice on the
+   page: Montserrat Light, brown-on-paper, generous measure.
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: var(--weight-light);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings — Montserrat Light by default; weight is opt-in emphasis.
+   Proof System: headings are disciplined (display tops out ~40px in use),
+   confidence comes from precision, not poster scale. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+  margin: 0 0 var(--space-4);
+  text-wrap: balance;
+}
+
+h1 { font-size: var(--text-3xl); }
+h2 { font-size: var(--text-2xl); }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+h5 { font-size: var(--text-md); }
+h6 { font-size: var(--text-base); letter-spacing: var(--tracking-wider); text-transform: uppercase; }
+
+p {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+  max-width: 68ch;
+}
+
+a {
+  color: var(--action);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+a:hover { color: var(--action-hover); }
+
+small { font-size: var(--text-xs); }
+
+/* Montserrat has no true italic — never synthesise an oblique. Inline emphasis
+   reads as weight + ink, not slant. (Genuine italic is Lato, applied explicitly
+   via .tn-caption / --font-italic.) */
+em, i {
+  font-style: normal;
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+/* Caption / footnote voice — Lato Light Italic */
+.tn-caption,
+figcaption,
+caption {
+  font-family: var(--font-caption);
+  font-style: italic;
+  font-weight: var(--weight-light);
+  color: var(--text-faint);
+  font-size: var(--text-sm);
+}
+
+/* Eyebrow / kicker — wide-tracked uppercase label */
+.tn-eyebrow {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-regular);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+hr {
+  border: 0;
+  border-top: var(--border-width) solid var(--border);
+  margin: var(--space-6) 0;
+}
+
+img { max-width: 100%; display: block; }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--brown-700);
+  color: var(--tn-white);
+}
+
+/* ============================================================
+   Proof System — precision primitives (the visual spine)
+   ============================================================ */
+
+/* Tabular numerals — numbers are the brand's muscle. */
+.tn-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+
+/* Micro label — wide-tracked uppercase index / category marker. */
+.tn-micro {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-medium);
+  font-size: 0.6875rem;          /* 11px */
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* The rule system — hairlines as a designed feature. */
+.tn-rule { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+.tn-rule--strong { border: 0; border-top: 1.5px solid var(--rule-strong); margin: 0; }
+
+/* Source / evidence caption — replaces decorative italic with proof. */
+.tn-source {
+  font-family: var(--font-sans);
+  font-weight: var(--weight-regular);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Index marker — the slash as wayfinding (/01, /02 …). */
+.tn-index {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  font-weight: var(--weight-regular);
+}

@@ -1,0 +1,30 @@
+# ---- dependencies and build output ----
+node_modules/
+dist/
+.vite/
+.tanstack/
+*.tsbuildinfo
+
+# ---- secrets: every env file except the blank template ----
+.env
+.env.*
+!.env.example
+
+# ---- context and reference material (not part of the app) ----
+# Handover, PRD, IA and design notes
+docs/
+# Claude Code instructions and settings
+CLAUDE.md
+.claude/
+**/SKILL.md
+**/skills/
+
+# One-off Zoho migration scripts (carry a sign-in default)
+scripts/
+
+# ---- editor and OS noise ----
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

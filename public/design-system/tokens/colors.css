@@ -1,0 +1,85 @@
+/* ============================================================
+   The/Nudge — Colour tokens
+   "Earth colour tones of light and dark browns are the primary
+   colours." Dark brown (#693d30) is the primary; light taupe
+   (#ddd0cc) and white complete the trio. We are not a loud brand.
+   ============================================================ */
+
+:root {
+  /* ---- Brand primaries (exact hex — never approximate) ---- */
+  --tn-brown: #693d30;        /* primary brand brown */
+  --tn-taupe: #ddd0cc;        /* secondary brand taupe */
+  --tn-white: #ffffff;
+
+  /* ---- Brown scale (tints & shades of #693d30) ---- */
+  --brown-900: #36201a;       /* near-black brown, deep backgrounds */
+  --brown-800: #4d2c23;       /* hover/pressed on brown surfaces */
+  --brown-700: #693d30;       /* = brand brown */
+  --brown-600: #7d4c3d;
+  --brown-500: #9a6655;       /* mid brown, charts */
+  --brown-400: #b88e7f;       /* muted brown, charts */
+  --brown-300: #cda99c;
+
+  /* ---- Taupe / paper scale (warm neutrals) ---- */
+  --paper:     #f6f2ec;       /* THE field — warm paper, the Proof System ground */
+  --taupe-50:  #faf7f4;       /* lightest warm paper */
+  --taupe-100: #f4efe9;       /* default light surface */
+  --taupe-200: #ece3dc;
+  --taupe-300: #ddd0cc;       /* = brand taupe */
+  --taupe-400: #c9b8b1;       /* hairline borders on light */
+  --taupe-500: #b3a099;
+
+  /* ---- Functional accents (subdued, brand-aligned) ---- */
+  --moss:   #6b7257;          /* livelihoods / positive, earthy green */
+  --clay:   #b4623f;          /* attention / impact stories */
+  --gold:   #c79a4e;          /* highlight, used sparingly */
+
+  /* ============================================================
+     Semantic aliases — reference these in components & layouts
+     ============================================================ */
+
+  /* Surfaces */
+  --surface:          var(--paper);        /* base canvas — warm paper, not stark white */
+  --surface-card:     var(--tn-white);     /* cards / wells sit slightly brighter than paper */
+  --surface-paper:    var(--paper);        /* warm off-white sections */
+  --surface-sunken:   var(--taupe-200);    /* insets, wells */
+  --surface-taupe:    var(--taupe-300);    /* tinted blocks */
+  --surface-dark:     var(--brown-700);    /* warm dark background */
+  --surface-hot:      var(--brown-900);    /* near-black — talent / hot temperature */
+  --surface-darkest:  var(--brown-900);
+
+  /* Text — the logo brown (#693d30 / brown-700) is the DARKEST text we use.
+     Nothing on a light surface goes darker than the logo; hierarchy comes from
+     weight and the lighter muted/faint steps, not from a near-black ink. */
+  --ink:              var(--brown-700);    /* headings / strongest text = logo brown */
+  --text:            var(--brown-700);    /* primary body text */
+  --text-muted:       var(--brown-500);    /* secondary text on light */
+  --text-faint:       var(--brown-400);    /* footnotes, captions, sources */
+  --text-on-dark:     var(--taupe-200);    /* primary text on brown */
+  --text-on-dark-muted: var(--brown-300);
+  --text-inverse:     var(--tn-white);
+
+  /* Lines & borders — the rule system is a designed feature */
+  --rule:             color-mix(in srgb, var(--brown-700) 20%, transparent); /* hairline */
+  --rule-strong:      var(--brown-700);    /* emphatic baseline rule */
+  --rule-on-dark:     color-mix(in srgb, var(--taupe-200) 22%, transparent);
+  --border:           color-mix(in srgb, var(--brown-700) 20%, transparent);
+  --border-strong:    var(--brown-700);
+  --border-on-dark:   color-mix(in srgb, var(--taupe-200) 22%, transparent);
+
+  /* Interactive (brown primary) */
+  --action:           var(--brown-700);
+  --action-hover:     var(--brown-800);
+  --action-active:    var(--brown-900);
+  --action-text:      var(--tn-white);
+  --focus-ring:       color-mix(in srgb, var(--brown-500) 55%, transparent);
+
+  /* Mono data ramp — rigour over rainbow. Logo brown is the darkest step
+     (never near-black), running to light taupe. */
+  --chart-1: var(--brown-700);
+  --chart-2: var(--brown-600);
+  --chart-3: var(--brown-500);
+  --chart-4: var(--brown-400);
+  --chart-5: var(--taupe-300);
+  --chart-6: var(--taupe-200);
+}

@@ -1,0 +1,52 @@
+/* ============================================================
+   The/Nudge — Typography tokens
+   Default: Montserrat Light. Emphasis / on-image: Montserrat
+   Regular–Bold. Secondary / footnotes: Lato Light Italic.
+   "Font sizes large enough to be legible but no more."
+   ============================================================ */
+
+:root {
+  /* ---- Families ---- */
+  --font-sans: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --font-serif-alt: "Lato", Georgia, serif;     /* used italic for subtext */
+  --font-italic: "Lato", Georgia, serif;        /* footnotes, captions */
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* ---- Weights ---- */
+  --weight-light: 300;     /* default body & headings */
+  --weight-regular: 400;   /* emphasis, on-image text */
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;      /* reserved for the wordmark / rare display */
+
+  /* ---- Type scale (1.250 major-third, 16px root) ---- */
+  --text-2xs: 0.694rem;    /* 11.1px — page numbers, fine print */
+  --text-xs:  0.8rem;      /* 12.8px — captions, labels */
+  --text-sm:  0.9rem;      /* 14.4px — secondary body */
+  --text-base: 1rem;       /* 16px   — body */
+  --text-md:  1.25rem;     /* 20px   — lead paragraph */
+  --text-lg:  1.563rem;    /* 25px   — h4 / sub-head */
+  --text-xl:  1.953rem;    /* 31px   — h3 */
+  --text-2xl: 2.441rem;    /* 39px   — h2 */
+  --text-3xl: 3.052rem;    /* 49px   — h1 */
+  --text-4xl: 3.815rem;    /* 61px   — display */
+  --text-5xl: 4.768rem;    /* 76px   — hero display */
+
+  /* ---- Line heights ---- */
+  --leading-tight: 1.1;    /* display & headings */
+  --leading-snug: 1.25;
+  --leading-normal: 1.55;  /* body copy */
+  --leading-relaxed: 1.7;
+
+  /* ---- Letter spacing ---- */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.12em;   /* uppercase labels (INSTITUTE style) */
+
+  /* ---- Semantic roles ---- */
+  --font-display: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --font-body: var(--font-sans);
+  --font-caption: var(--font-italic);
+}
