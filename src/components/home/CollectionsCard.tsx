@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { IndianRupee } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Badge, EmptyState, Skeleton } from '../ui'
-import { formatMoney } from '../../lib/format'
+import { formatDate, formatMoney } from '../../lib/format'
 import { useAccess } from '../../lib/accessContext'
-import { HomeCard } from './HomeCard'
-import { dueBadge, daysFromToday } from './due'
+import { HomeSection } from './HomeSection'
+import { daysFromToday, statusBadge } from './due'
 
 /**
  * Money still to come in on this person's grants: the five instalments to
@@ -69,44 +68,58 @@ export function CollectionsCard() {
   useEffect(() => { void load() }, [load])
 
   return (
-    <HomeCard
+    <HomeSection
       title="Remaining collections"
-      footer={<Link to="/grants" className="celllink" style={{ fontSize: 'var(--text-sm)' }}>All grants</Link>}
+      sub={total && total.count > 0 ? (
+        <span className="tn-num">
+          <strong>{formatMoney(total.sum)}</strong> still to collect across {total.count} {total.count === 1 ? 'instalment' : 'instalments'}
+        </span>
+      ) : null}
+      action={<Link to="/grants" className="celllink" style={{ fontSize: 'var(--text-sm)' }}>All grants</Link>}
     >
       {rows === null ? (
-        <div className="stack">{[0, 1, 2].map((i) => <Skeleton key={i} height={32} />)}</div>
+        <div className="card stack">{[0, 1, 2].map((i) => <Skeleton key={i} height={32} />)}</div>
       ) : !total || total.count === 0 ? (
-        <EmptyState title="Nothing left to collect" body="Instalments still owed on the grants you own show here." />
-      ) : (
-        <div className="stack" style={{ gap: 'var(--space-4)' }}>
-          <p className="tn-num" style={{ margin: 0 }}>
-            <strong>{formatMoney(total.sum)}</strong>
-            <span className="muted"> still to collect across {total.count} {total.count === 1 ? 'instalment' : 'instalments'}</span>
+        <div className="card">
+          <EmptyState title="Nothing left to collect" body="Instalments still owed on the grants you own show here." />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="card">
+          <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+            Nothing due from the last 90 days onward — the total is older instalments still marked unpaid.
           </p>
-          {rows.length === 0 ? (
-            <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-              Nothing due from the last 90 days onward — the total is older instalments still marked unpaid.
-            </p>
-          ) : null}
-          <div className="feed">
-            {rows.map((r) => {
-              const badge = dueBadge(r.effective_due_date)
-              return (
-                <article key={r.id} className="feeditem">
-                  <span className="feeditem__icon" aria-hidden="true"><IndianRupee size={14} /></span>
-                  <div className="feeditem__head">
-                    <Link to="/grants/$id" params={{ id: r.grant_id }} className="feeditem__subject celllink">
-                      {r.org_name ?? 'Grant'}
-                    </Link>
-                    <span className="tn-num">{formatMoney(r.outstanding_inr)}</span>
-                    <Badge tone={badge.tone}>{badge.label}</Badge>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+        </div>
+      ) : (
+        <div className="tablewrap homesec__scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Donor</th>
+                <th style={{ width: '140px' }}>Due</th>
+                <th style={{ width: '140px' }}>Status</th>
+                <th style={{ width: '150px', textAlign: 'right' }}>Outstanding</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const status = statusBadge(r.effective_due_date)
+                return (
+                  <tr key={r.id}>
+                    <td>
+                      <Link to="/grants/$id" params={{ id: r.grant_id }} className="celllink">
+                        {r.org_name ?? 'Grant'}
+                      </Link>
+                    </td>
+                    <td className="tn-num muted" style={{ whiteSpace: 'nowrap' }}>{formatDate(r.effective_due_date)}</td>
+                    <td><Badge tone={status.tone}>{status.label}</Badge></td>
+                    <td className="tn-num" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatMoney(r.outstanding_inr)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-    </HomeCard>
+    </HomeSection>
   )
 }

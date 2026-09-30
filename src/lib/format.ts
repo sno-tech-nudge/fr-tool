@@ -84,3 +84,14 @@ export function toISODate(value: Date): string {
   const d = String(value.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
+
+/** "3h ago", "2w ago" — for feeds where the exact time hardly matters. */
+export function timeAgo(value: string | Date | null | undefined): string {
+  if (!value) return ''
+  const secs = (Date.now() - new Date(value).getTime()) / 1000
+  if (secs < 3600) return `${Math.max(1, Math.floor(secs / 60))}m ago`
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`
+  if (secs < 86400 * 7) return `${Math.floor(secs / 86400)}d ago`
+  if (secs < 86400 * 60) return `${Math.floor(secs / 86400 / 7)}w ago`
+  return formatDate(value)
+}

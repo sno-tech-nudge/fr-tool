@@ -15,3 +15,12 @@ export function daysFromToday(days: number): string {
   d.setDate(d.getDate() + days)
   return toISODate(d)
 }
+
+/** Where an instalment stands, in words — the date has its own column. */
+export function statusBadge(date: string | null): { tone: 'red' | 'amber' | 'outline'; label: string } {
+  const days = daysUntil(date)
+  if (days === null) return { tone: 'outline', label: 'No date' }
+  if (days < 0) return { tone: 'red', label: days === -1 ? '1 day late' : `${Math.abs(days)} days late` }
+  if (days === 0) return { tone: 'amber', label: 'Due today' }
+  return { tone: 'outline', label: days === 1 ? 'In 1 day' : `In ${days} days` }
+}

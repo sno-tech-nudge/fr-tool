@@ -2,22 +2,29 @@
 //
 // Fetches recent news for donor organisations and keeps only what helps the
 // fundraising team. Built to spend as few Gemini tokens as possible:
-//   1. Google News RSS, with CSR terms inside the query itself (free)
+//   1. news RSS (Google, else Bing), CSR terms inside the query itself (free)
 //   2. anything already stored is skipped (free)
-//   3. only NEW headlines go to Gemini, ~30 per call, titles only
-//   4. every verdict is stored — kept or dropped — so no headline is judged twice
+//   3. only NEW headlines go to Gemini, ~50 per call, titles only
+//   4. every verdict is stored so no headline is judged twice; dropped ones
+//      are deleted once older than the feeds reach back (30 days)
 // News belongs to an organisation, not a person, so each org is fetched once
 // for the whole team and re-checked at most every STALE_HOURS.
+//
+// Long runs happen in the background: each invocation does one batch, then
+// calls itself for the next, so no single request hits the time limit and
+// nobody has to keep a page open.
 //
 // Edge Functions are edited in the Supabase dashboard; this file is the source
 // to paste there.
 //
 // Modes (POST body):
-//   { mode: 'mine' }                    every stale live org, the caller's own first; the
-//                                       app calls again while `remaining` > 0
-//   { mode: 'org', organisation_id }    one org (Org 360 → News → Refresh)
-//   { mode: 'all' }                     every stale org, live or not; super admin only
-//   { mode: 'sweep' }                   40 stalest orgs; service role only (daily cron)
+//   { mode: 'mine' }                   the caller's own stale orgs now, then every other
+//                                      stale live org in the background
+//   { mode: 'org', organisation_id }   one org (Org 360 → News → Refresh)
+//   { mode: 'all' }                    every stale org, live or not, in the background;
+//                                      super admin only
+//   { mode: 'status', scope, since }   how many are still stale — for progress bars
+//   { mode: 'sweep', scope }           one background batch; service role only
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -28,12 +35,17 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 
 const STALE_HOURS = 6
-// A cap per call keeps each request inside the function's time limit; the app
-// repeats the call until nothing stale is left.
-const MAX_ORGS = 40
+// One batch per invocation keeps each request well inside the time limit.
+const MAX_ORGS = 50
 const ITEMS_PER_ORG = 8
-const BATCH = 30
-const CONCURRENCY = 5
+const BATCH = 50
+/** News searches at once. */
+const CONCURRENCY = 15
+/** Gemini calls at once — kept low to stay clear of its rate limit. */
+const GEMINI_PARALLEL = 4
+/** Dropped headlines older than this can no longer come back from the feeds. */
+const DROPPED_KEEP_DAYS = 30
+const SELF_URL = `${SUPABASE_URL}/functions/v1/fr-news`
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -47,6 +59,18 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY)
 
 type Org = { id: string; name: string; news_query: string | null; news_checked_at: string | null }
 type Item = { orgId: string; orgName: string; title: string; url: string; source: string | null; published: string | null }
+type Scope = 'all' | 'live'
+/** Per-run state shared by every search in it. */
+type Run = { googleBlocked: boolean }
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
+
+/** Keep working after the response has gone; inline where unsupported. */
+async function later(work: () => Promise<unknown>) {
+  const p = work().catch((e) => console.error('background', e))
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(p)
+  else await p
+}
 
 /** PostgREST caps reads at 1,000 rows, the service role included. */
 async function readAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
@@ -135,11 +159,6 @@ function parse(xml: string, org: Org, fromBing: boolean): Item[] {
 }
 
 /**
- * Google News first, Bing News if Google refuses — Google often blocks
- * requests from cloud servers like this one. The CSR terms sit inside the
- * search either way, so off-topic news mostly never arrives.
- */
-/**
  * Headlines say "HDFC Bank", never "HDFC Bank Limited" — searched in quotes,
  * the legal suffix alone finds nothing. news_query overrides all of this.
  */
@@ -153,11 +172,21 @@ function searchName(org: Org): string {
     .trim()
 }
 
-async function fetchNews(org: Org): Promise<{ items: Item[]; ok: boolean; error?: string }> {
+/**
+ * Google News first, Bing News if Google refuses. Google blocks most requests
+ * from cloud servers like this one, so after its first refusal in a run it is
+ * skipped for the rest — every search would otherwise wait on a failure first.
+ * The CSR terms sit inside the search either way.
+ */
+async function fetchNews(org: Org, run: Run): Promise<{ items: Item[]; ok: boolean; error?: string }> {
   const name = searchName(org)
-  const google = await getRss(`https://news.google.com/rss/search?q=${
-    encodeURIComponent(`"${name}" ${TERMS} when:30d`)}&hl=en-IN&gl=IN&ceid=IN:en`)
-  if (google.xml) return { items: parse(google.xml, org, false), ok: true }
+  let google: { xml: string | null; error?: string } = { xml: null, error: 'skipped (blocked earlier in this run)' }
+  if (!run.googleBlocked) {
+    google = await getRss(`https://news.google.com/rss/search?q=${
+      encodeURIComponent(`"${name}" ${TERMS} when:30d`)}&hl=en-IN&gl=IN&ceid=IN:en`)
+    if (google.xml) return { items: parse(google.xml, org, false), ok: true }
+    run.googleBlocked = true
+  }
 
   const bing = await getRss(`https://www.bing.com/news/search?q=${
     encodeURIComponent(`"${name}" ${TERMS}`)}&format=rss&cc=IN`)
@@ -227,68 +256,49 @@ async function classify(batch: Item[]): Promise<Verdict[] | null> {
   try { return JSON.parse(text) as Verdict[] } catch { return null }
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
-  if (req.method !== 'POST') return json(405, { error: 'Use POST.' })
-  if (!GEMINI_KEY) return json(500, { error: 'GEMINI_API_KEY is not set on this function.' })
+type Summary = {
+  checked: number
+  found: number
+  kept: number
+  failed: number
+  unreachable: number
+  fetch_error: string | null
+}
 
-  let body: { mode?: string; organisation_id?: string }
-  try { body = await req.json() } catch { return json(400, { error: 'Expected a JSON body.' }) }
-  const mode = body.mode
-
-  const authorization = req.headers.get('Authorization') ?? ''
-  const isService = authorization === `Bearer ${SERVICE_KEY}`
-  let employee: { id: string; erp_role: string } | null = null
-
-  if (!isService) {
-    const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authorization } } })
-    const { data: allowed } = await asUser.rpc('is_fr_authorised')
-    if (allowed !== true) return json(403, { error: 'You do not have access to this module.' })
-    const { data: u } = await asUser.auth.getUser()
-    const { data: e } = await admin.from('employees').select('id, erp_role')
-      .ilike('email', u.user?.email ?? '').maybeSingle()
-    employee = e
-    if (!employee) return json(403, { error: 'No employee record matches your sign-in.' })
-  }
-
-  // ---- which orgs ----
-  const orgs = await readAll<Org>((a, b) => admin.from('fr_organisations')
+async function loadOrgs(): Promise<Org[]> {
+  return readAll<Org>((a, b) => admin.from('fr_organisations')
     .select('id, name, news_query, news_checked_at').is('deleted_at', null).range(a, b))
+}
 
-  let pick: Org[]
-  if (mode === 'org') {
-    const org = orgs.find((o) => o.id === body.organisation_id)
-    if (!org) return json(404, { error: 'Organisation not found.' })
-    pick = isStale(org) ? [org] : []
-  } else if (mode === 'mine') {
-    if (!employee) return json(400, { error: 'mine needs a signed-in user.' })
-    // One press refreshes everyone's orgs, since news is shared. The caller's
-    // own go first so their feed fills on the first call.
-    const [live, mine] = await Promise.all([liveOrgIds(), liveOrgIds(employee.id)])
-    pick = orgs.filter((o) => live.has(o.id) && isStale(o))
-      .sort((a, b) => Number(mine.has(b.id)) - Number(mine.has(a.id)) || byStaleness(a, b))
-  } else if (mode === 'all') {
-    if (!isService && employee?.erp_role !== 'super_admin') {
-      return json(403, { error: 'Only a super admin can fetch news for every organisation.' })
-    }
-    pick = orgs.filter(isStale).sort(byStaleness)
-  } else if (mode === 'sweep') {
-    if (!isService) return json(403, { error: 'The sweep runs from the scheduler only.' })
+/** Stale orgs in a scope, stalest first, plus how many the scope holds. */
+async function staleIn(scope: Scope): Promise<{ stale: Org[]; total: number }> {
+  const orgs = await loadOrgs()
+  let inScope = orgs
+  if (scope === 'live') {
     const live = await liveOrgIds()
-    pick = orgs.filter((o) => live.has(o.id) && isStale(o)).sort(byStaleness)
-  } else {
-    return json(400, { error: 'mode must be mine, org, all or sweep.' })
+    inScope = orgs.filter((o) => live.has(o.id))
   }
+  return { stale: inScope.filter(isStale).sort(byStaleness), total: inScope.length }
+}
 
-  const remaining = Math.max(0, pick.length - MAX_ORGS)
-  pick = pick.slice(0, MAX_ORGS)
-  if (pick.length === 0) return json(200, { ok: true, checked: 0, remaining: 0, found: 0, kept: 0 })
+/** Fetch, judge and store one batch of orgs. */
+async function runBatch(pick: Org[]): Promise<Summary> {
+  const empty: Summary = { checked: 0, found: 0, kept: 0, failed: 0, unreachable: 0, fetch_error: null }
+  if (pick.length === 0) return empty
+
+  // Claim the batch first, so a second run going at the same time picks
+  // different orgs. Orgs whose search fails get their old time back below.
+  await admin.from('fr_organisations')
+    .update({ news_checked_at: new Date().toISOString() })
+    .in('id', pick.map((o) => o.id))
 
   // ---- fetch, then drop what is already stored ----
-  const results = await pool(pick, CONCURRENCY, fetchNews)
+  const run: Run = { googleBlocked: false }
+  const results = await pool(pick, CONCURRENCY, (o) => fetchNews(o, run))
   const fetched = results.flatMap((r) => r.items)
-  const unreachable = results.filter((r) => !r.ok)
-  if (unreachable.length > 0) console.error('news search failed', unreachable.length, unreachable[0].error)
+  const unreachable = pick.filter((_, i) => !results[i].ok)
+  const firstError = results.find((r) => !r.ok)?.error ?? null
+  if (unreachable.length > 0) console.error('news search failed', unreachable.length, firstError)
   const { data: known } = await admin.from('fr_org_news').select('organisation_id, url')
     .in('organisation_id', pick.map((o) => o.id))
   const seen = new Set((known ?? []).map((k) => `${k.organisation_id}|${k.url}`))
@@ -296,15 +306,15 @@ Deno.serve(async (req) => {
     !seen.has(`${it.orgId}|${it.url}`)
     && all.findIndex((x) => x.orgId === it.orgId && x.url === it.url) === i)
 
-  // ---- judge only the new headlines ----
-  let kept = 0
-  let failed = 0
-  for (let s = 0; s < fresh.length; s += BATCH) {
-    const batch = fresh.slice(s, s + BATCH)
+  // ---- judge only the new headlines, several Gemini calls at once ----
+  const batches: Item[][] = []
+  for (let b = 0; b < fresh.length; b += BATCH) batches.push(fresh.slice(b, b + BATCH))
+  const judged = await pool(batches, GEMINI_PARALLEL, async (batch) => {
     const verdicts = await classify(batch)
     // A failed batch is not stored, so the same headlines are retried next time.
-    if (!verdicts) { failed += batch.length; continue }
+    if (!verdicts) return { kept: 0, failed: batch.length }
     const byIndex = new Map(verdicts.map((v) => [v.i, v]))
+    let kept = 0
     const rows = batch.map((it, i) => {
       const v = byIndex.get(i)
       const keep = v?.keep === true
@@ -321,25 +331,123 @@ Deno.serve(async (req) => {
       }
     })
     await admin.from('fr_org_news').upsert(rows, { onConflict: 'organisation_id,url', ignoreDuplicates: true })
-  }
-
-  // Only orgs whose search actually answered count as checked — a blocked or
-  // failed search must be retried on the next press, not skipped for 6 hours.
-  const searched = pick.filter((_, i) => results[i].ok).map((o) => o.id)
-  if (searched.length > 0) {
-    await admin.from('fr_organisations')
-      .update({ news_checked_at: new Date().toISOString() })
-      .in('id', searched)
-  }
-
-  return json(200, {
-    ok: true,
-    checked: pick.length,
-    remaining,
-    found: fresh.length,
-    kept,
-    failed,
-    unreachable: unreachable.length,
-    fetch_error: unreachable[0]?.error ?? null,
+    return { kept, failed: 0 }
   })
+
+  // A blocked or failed search must be retried on the next press, not skipped
+  // for 6 hours — hand those orgs back their previous time.
+  await Promise.all(unreachable.map((o) =>
+    admin.from('fr_organisations').update({ news_checked_at: o.news_checked_at }).eq('id', o.id)))
+
+  return {
+    checked: pick.length,
+    found: fresh.length,
+    kept: judged.reduce((n, j) => n + j.kept, 0),
+    failed: judged.reduce((n, j) => n + j.failed, 0),
+    unreachable: unreachable.length,
+    fetch_error: firstError,
+  }
+}
+
+/** Dropped headlines past the feeds' reach can never be re-fetched, so they go. */
+async function pruneDropped() {
+  const cutoff = new Date(Date.now() - DROPPED_KEEP_DAYS * 86_400_000).toISOString()
+  await admin.from('fr_org_news').delete().eq('is_relevant', false).lt('published_at', cutoff)
+  await admin.from('fr_org_news').delete().eq('is_relevant', false).is('published_at', null).lt('created_at', cutoff)
+}
+
+/** Hand the next batch to a fresh invocation of this same function. */
+async function nextHop(scope: Scope) {
+  const res = await fetch(SELF_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'sweep', scope }),
+  })
+  if (!res.ok) console.error('next hop failed', res.status, (await res.text()).slice(0, 200))
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+  if (req.method !== 'POST') return json(405, { error: 'Use POST.' })
+  if (!GEMINI_KEY) return json(500, { error: 'GEMINI_API_KEY is not set on this function.' })
+
+  let body: { mode?: string; organisation_id?: string; scope?: string; since?: string }
+  try { body = await req.json() } catch { return json(400, { error: 'Expected a JSON body.' }) }
+  const mode = body.mode
+  const scope: Scope = body.scope === 'all' ? 'all' : 'live'
+
+  const authorization = req.headers.get('Authorization') ?? ''
+  const isService = authorization === `Bearer ${SERVICE_KEY}`
+  let employee: { id: string; erp_role: string } | null = null
+
+  if (!isService) {
+    const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authorization } } })
+    const { data: allowed } = await asUser.rpc('is_fr_authorised')
+    if (allowed !== true) return json(403, { error: 'You do not have access to this module.' })
+    const { data: u } = await asUser.auth.getUser()
+    const { data: e } = await admin.from('employees').select('id, erp_role')
+      .ilike('email', u.user?.email ?? '').maybeSingle()
+    employee = e
+    if (!employee) return json(403, { error: 'No employee record matches your sign-in.' })
+  }
+
+  // ---- one org, right now ----
+  if (mode === 'org') {
+    const org = (await loadOrgs()).find((o) => o.id === body.organisation_id)
+    if (!org) return json(404, { error: 'Organisation not found.' })
+    const r = await runBatch(isStale(org) ? [org] : [])
+    return json(200, { ok: true, ...r, remaining: 0, background: 0 })
+  }
+
+  // ---- the caller's own now, everyone else's in the background ----
+  if (mode === 'mine') {
+    if (!employee) return json(400, { error: 'mine needs a signed-in user.' })
+    const [{ stale }, mine] = await Promise.all([staleIn('live'), liveOrgIds(employee.id)])
+    const own = stale.filter((o) => mine.has(o.id)).slice(0, MAX_ORGS)
+    const r = await runBatch(own)
+    const background = stale.length - own.length
+    if (background > 0) await later(() => nextHop('live'))
+    else await later(pruneDropped)
+    return json(200, { ok: true, ...r, remaining: 0, background })
+  }
+
+  // ---- every org, entirely in the background ----
+  if (mode === 'all') {
+    if (!isService && employee?.erp_role !== 'super_admin') {
+      return json(403, { error: 'Only a super admin can fetch news for every organisation.' })
+    }
+    const { stale, total } = await staleIn('all')
+    if (stale.length > 0) await later(() => nextHop('all'))
+    return json(200, { ok: true, started: stale.length > 0, remaining: stale.length, total })
+  }
+
+  // ---- progress for whoever is watching ----
+  if (mode === 'status') {
+    const { stale, total } = await staleIn(scope)
+    let kept = 0
+    if (body.since) {
+      const { count } = await admin.from('fr_org_news').select('id', { count: 'exact', head: true })
+        .eq('is_relevant', true).gte('created_at', body.since)
+      kept = count ?? 0
+    }
+    return json(200, { ok: true, remaining: stale.length, total, kept })
+  }
+
+  // ---- one hop of the background chain ----
+  if (mode === 'sweep') {
+    if (!isService) return json(403, { error: 'The sweep runs in the background only.' })
+    // Answer at once so the hop that called us can finish; the work carries on.
+    await later(async () => {
+      const { stale } = await staleIn(scope)
+      if (stale.length === 0) return
+      const r = await runBatch(stale.slice(0, MAX_ORGS))
+      console.log('sweep', scope, JSON.stringify(r))
+      // Stop if nothing could be searched — going again at once would fail too.
+      if (stale.length > MAX_ORGS && r.unreachable < r.checked) await nextHop(scope)
+      else await pruneDropped()
+    })
+    return json(202, { ok: true, started: true })
+  }
+
+  return json(400, { error: 'mode must be mine, org, all, status or sweep.' })
 })

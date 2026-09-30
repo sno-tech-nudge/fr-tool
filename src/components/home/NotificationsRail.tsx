@@ -6,14 +6,13 @@ import { Badge, Button, EmptyState, Skeleton } from '../ui'
 import { formatDateTime } from '../../lib/format'
 import { severityTone } from '../../lib/notifications'
 import { useAccess } from '../../lib/accessContext'
-import { HomeCard } from './HomeCard'
+import { HomeSection } from './HomeSection'
 
 /**
  * Everything waiting for this person, newest first.
  *
- * Rows are written by whatever raises the notification, not by this component
- * — it only reads, marks read, and dismisses. Nothing writes them yet, so an
- * empty rail is the correct state until the nudge job exists.
+ * Rows are written by whatever raises the notification (the daily stage-nudge
+ * job), not by this component — it only reads, marks read, and dismisses.
  */
 
 type Notification = {
@@ -79,68 +78,81 @@ export function NotificationsRail() {
   const unread = (items ?? []).filter((n) => !n.read_at).length
 
   return (
-    <HomeCard
+    <HomeSection
       title="Notifications"
       meta={unread > 0 ? <Badge tone="brown">{unread}</Badge> : null}
-      action={unread > 0 ? (
-        <Button size="sm" variant="ghost" iconLeft={<Check size={14} />} onClick={() => void markAllRead()}>
-          Mark read
-        </Button>
-      ) : null}
-      footer={
-        <Link to="/admin/notifications" className="celllink" style={{ fontSize: 'var(--text-sm)' }}>
-          Notification settings
-        </Link>
+      action={
+        <div className="row" style={{ gap: 'var(--space-3)' }}>
+          {unread > 0 ? (
+            <Button size="sm" variant="ghost" iconLeft={<Check size={14} />} onClick={() => void markAllRead()}>
+              Mark read
+            </Button>
+          ) : null}
+          <Link to="/admin/notifications" className="celllink" style={{ fontSize: 'var(--text-sm)' }}>
+            Notification settings
+          </Link>
+        </div>
       }
     >
-
       {items === null ? (
-        <div className="stack">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height={40} />)}
+        <div className="card stack">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height={36} />)}
         </div>
       ) : error ? (
-        <EmptyState
-          title="Notifications are not switched on"
-          body={`${error} — the fr_notifications table may not exist yet.`}
-        />
+        <div className="card">
+          <EmptyState
+            title="Notifications are not switched on"
+            body={`${error} — the fr_notifications table may not exist yet.`}
+          />
+        </div>
       ) : items.length === 0 ? (
-        <EmptyState
-          title="Nothing needs you"
-          body="Stage nudges, instalments and reports falling due will appear here."
-        />
+        <div className="card">
+          <EmptyState
+            title="Nothing needs you"
+            body="Stage nudges, instalments and reports falling due will appear here."
+          />
+        </div>
       ) : (
-        <div className="feed">
-          {items.map((n) => {
-            const link = target(n)
-            return (
-              <article key={n.id} className="notif" data-unread={!n.read_at || undefined}>
-                <div className="feeditem__head">
-                  {link ? (
-                    <Link to={link.to} params={{ id: link.id }} className="feeditem__subject celllink">
-                      {n.title}
-                    </Link>
-                  ) : (
-                    <span className="feeditem__subject">{n.title}</span>
-                  )}
-                  {n.severity ? <Badge tone={severityTone(n.severity)}>{n.severity}</Badge> : null}
-                </div>
-                {n.body ? <p className="feeditem__body">{n.body}</p> : null}
-                <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <span className="feeditem__when tn-num">{formatDateTime(n.created_at)}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    iconLeft={<BellOff size={13} />}
-                    onClick={() => void dismiss(n.id)}
-                  >
-                    Dismiss
-                  </Button>
-                </div>
-              </article>
-            )
-          })}
+        <div className="tablewrap homesec__scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Notification</th>
+                <th>Details</th>
+                <th style={{ width: '90px' }}>Level</th>
+                <th style={{ width: '170px' }}>When</th>
+                <th className="col-actions">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((n) => {
+                const link = target(n)
+                return (
+                  <tr key={n.id} data-unread={!n.read_at || undefined} data-read={n.read_at ? true : undefined}>
+                    <td>
+                      {link ? (
+                        <Link to={link.to} params={{ id: link.id }} className="celllink">{n.title}</Link>
+                      ) : n.title}
+                    </td>
+                    <td className="muted">{n.body ?? '—'}</td>
+                    <td>
+                      {n.severity
+                        ? <Badge tone={severityTone(n.severity)}>{n.severity}</Badge>
+                        : <span className="muted">—</span>}
+                    </td>
+                    <td className="tn-num muted" style={{ whiteSpace: 'nowrap' }}>{formatDateTime(n.created_at)}</td>
+                    <td className="col-actions">
+                      <Button size="sm" variant="ghost" iconLeft={<BellOff size={13} />} onClick={() => void dismiss(n.id)}>
+                        Dismiss
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-    </HomeCard>
+    </HomeSection>
   )
 }

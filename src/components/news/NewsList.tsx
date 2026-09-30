@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ExternalLink, Newspaper } from 'lucide-react'
+import { Newspaper } from 'lucide-react'
 import { Badge } from '../ui'
 import { formatDate } from '../../lib/format'
 import { NEWS_CATEGORY, type NewsItem } from '../../lib/news'
@@ -13,7 +13,14 @@ export function NewsList({ items, showOrg }: { items: NewsItem[]; showOrg: boole
           <span className="feeditem__icon" aria-hidden="true"><Newspaper size={14} /></span>
           <div style={{ minWidth: 0 }}>
             <div className="feeditem__head">
-              <span className="feeditem__subject">{n.title}</span>
+              <a
+                href={n.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="feeditem__subject newslink"
+              >
+                {n.title}
+              </a>
               {n.category ? <Badge tone="outline">{NEWS_CATEGORY[n.category] ?? n.category}</Badge> : null}
             </div>
             {n.why ? <p className="feeditem__body">{n.why}</p> : null}
@@ -30,16 +37,6 @@ export function NewsList({ items, showOrg }: { items: NewsItem[]; showOrg: boole
               <span className="feeditem__when tn-num">
                 {[n.source, n.published_at ? formatDate(n.published_at) : null].filter(Boolean).join(' · ')}
               </span>
-              {/* Google News links pass through a Google redirect before the article. */}
-              <a
-                href={n.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="celllink feeditem__when row"
-                style={{ gap: 4 }}
-              >
-                Read more <ExternalLink size={11} />
-              </a>
             </div>
           </div>
         </article>

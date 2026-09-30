@@ -10,21 +10,18 @@ import { NotificationsRail } from '../components/home/NotificationsRail'
 export const Route = createFileRoute('/_app/')({ component: HomePage })
 
 /**
- * My Day (IA §5.1). What is on this page depends on which half of the job the
- * person does: hunting new business or managing existing partners.
- *
- * The choice is made by the person rather than inferred, because nothing in
- * the schema records which team someone is on — `deal_category` sits on deals,
- * not on people. When that changes this becomes the default rather than the
- * whole mechanism.
+ * My Day (IA §5.1): news and notifications up front, with the person's actions
+ * and remaining collections a click away. Collections are hidden for anyone
+ * tagged Hunting on the Team members page — hunters rarely own grants, so the
+ * tab would only ever be empty. Untagged people (admins, for one) see it.
  */
 
 const VIEW_KEY = 'fr-home-view'
 
 const VIEWS = [
   { key: 'day', label: 'My day' },
-  { key: 'hunting', label: 'Hunting' },
-  { key: 'partners', label: 'Partner management' },
+  { key: 'actions', label: 'Actions' },
+  { key: 'collections', label: 'Remaining collections' },
 ] as const
 
 type View = typeof VIEWS[number]['key']
@@ -39,13 +36,17 @@ function readStoredView(): View {
 
 function HomePage() {
   const access = useAccess()
-  const [view, setView] = useState<View>('day')
+  const [chosen, setChosen] = useState<View>('day')
+  const showCollections = access.frFocus !== 'hunting'
+  const views = VIEWS.filter((v) => v.key !== 'collections' || showCollections)
+  // A stored choice can point at a tab this person no longer has.
+  const view: View = views.some((v) => v.key === chosen) ? chosen : 'day'
 
   // Read after mount, so the first paint never depends on storage.
-  useEffect(() => { setView(readStoredView()) }, [])
+  useEffect(() => { setChosen(readStoredView()) }, [])
 
   function choose(next: View) {
-    setView(next)
+    setChosen(next)
     try { localStorage.setItem(VIEW_KEY, next) } catch { /* ignore */ }
   }
 
@@ -65,7 +66,7 @@ function HomePage() {
       </div>
 
       <div className="pillrow" role="radiogroup" aria-label="What to show">
-        {VIEWS.map((v) => (
+        {views.map((v) => (
           <button
             key={v.key}
             type="button"
@@ -79,14 +80,16 @@ function HomePage() {
         ))}
       </div>
 
-      {/* Two even columns: what needs doing and what just happened on top,
-          money and news beneath. Each card scrolls inside itself. */}
-      <div className="homegrid">
-        <ActionsCard dealCategory={view === 'hunting' ? 'NBD' : view === 'partners' ? 'PM' : null} />
-        <NotificationsRail />
-        {/* Hunters rarely own grants, so collections would sit empty for them. */}
-        {view !== 'hunting' ? <CollectionsCard /> : null}
-        <NewsCard />
+      {/* News strip, then full-width tables. Each table scrolls within itself if long. */}
+      <div className="homestack">
+        {view === 'day' ? (
+          <>
+            <NewsCard />
+            <NotificationsRail />
+          </>
+        ) : null}
+        {view === 'actions' ? <ActionsCard /> : null}
+        {view === 'collections' ? <CollectionsCard /> : null}
       </div>
     </div>
   )

@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Check, Clock, FileCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Badge, EmptyState, Skeleton } from '../ui'
 import { useAccess } from '../../lib/accessContext'
-import { HomeCard } from './HomeCard'
+import { HomeSection } from './HomeSection'
 import { dueBadge, daysFromToday } from './due'
 
 /**
- * Everything waiting on this person to do something, in one list: next steps
+ * Everything waiting on this person to do something, in one table: next steps
  * on their deals, reports they owe on their grants, and tasks assigned to
  * them. Soonest first, with anything late at the top.
  */
@@ -25,10 +24,10 @@ type Item = {
   link: { to: string; id: string } | null
 }
 
-const ICON: Record<Kind, React.ReactNode> = {
-  next_step: <Clock size={14} />,
-  report: <FileCheck size={14} />,
-  task: <Check size={14} />,
+const KIND_LABEL: Record<Kind, string> = {
+  next_step: 'Next step',
+  report: 'Report due',
+  task: 'Task',
 }
 
 const DETAIL_ROUTES: Record<string, string> = {
@@ -37,7 +36,7 @@ const DETAIL_ROUTES: Record<string, string> = {
   organisation: '/organisations/$id',
 }
 
-export function ActionsCard({ dealCategory }: { dealCategory: 'NBD' | 'PM' | null }) {
+export function ActionsCard() {
   const access = useAccess()
   const [items, setItems] = useState<Item[] | null>(null)
 
@@ -46,7 +45,7 @@ export function ActionsCard({ dealCategory }: { dealCategory: 'NBD' | 'PM' | nul
     if (!me) return
     setItems(null)
 
-    let steps = supabase
+    const steps = supabase
       .from('fr_opportunities')
       .select('id, name, next_step, next_step_date, fr_organisations(name), fr_pipeline_stages!inner(terminal_type)')
       .eq('owner_user_id', me)
@@ -56,7 +55,6 @@ export function ActionsCard({ dealCategory }: { dealCategory: 'NBD' | 'PM' | nul
       .lte('next_step_date', daysFromToday(7))
       .order('next_step_date')
       .limit(20)
-    if (dealCategory) steps = steps.eq('deal_category', dealCategory)
 
     const [s, r, t] = await Promise.all([
       steps,
@@ -113,45 +111,55 @@ export function ActionsCard({ dealCategory }: { dealCategory: 'NBD' | 'PM' | nul
     ]
     all.sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999'))
     setItems(all)
-  }, [access.employeeId, dealCategory])
+  }, [access.employeeId])
 
   useEffect(() => { void load() }, [load])
 
   return (
-    <HomeCard
+    <HomeSection
       title="Actions"
       meta={items && items.length > 0 ? <Badge tone="brown">{items.length}</Badge> : null}
     >
       {items === null ? (
-        <div className="stack">{[0, 1, 2].map((i) => <Skeleton key={i} height={36} />)}</div>
+        <div className="card stack">{[0, 1, 2].map((i) => <Skeleton key={i} height={36} />)}</div>
       ) : items.length === 0 ? (
-        <EmptyState
-          title="Nothing waiting on you"
-          body="Next steps due this week, reports due in the next 60 days, and tasks assigned to you show here."
-        />
+        <div className="card">
+          <EmptyState
+            title="Nothing waiting on you"
+            body="Next steps due this week, reports due in the next 60 days, and tasks assigned to you show here."
+          />
+        </div>
       ) : (
-        <div className="feed">
-          {items.map((it) => {
-            const badge = it.kind === 'task' ? { tone: 'outline' as const, label: 'Task' } : dueBadge(it.due)
-            return (
-              <article key={it.key} className="feeditem">
-                <span className="feeditem__icon" aria-hidden="true">{ICON[it.kind]}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div className="feeditem__head">
-                    {it.link ? (
-                      <Link to={it.link.to} params={{ id: it.link.id }} className="feeditem__subject celllink">
-                        {it.title}
-                      </Link>
-                    ) : <span className="feeditem__subject">{it.title}</span>}
-                    <Badge tone={badge.tone}>{badge.label}</Badge>
-                  </div>
-                  {it.detail ? <p className="feeditem__body">{it.detail}</p> : null}
-                </div>
-              </article>
-            )
-          })}
+        <div className="tablewrap homesec__scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Details</th>
+                <th style={{ width: '130px' }}>Type</th>
+                <th style={{ width: '140px' }}>Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it) => {
+                const due = it.kind === 'task' ? null : dueBadge(it.due)
+                return (
+                  <tr key={it.key}>
+                    <td>
+                      {it.link ? (
+                        <Link to={it.link.to} params={{ id: it.link.id }} className="celllink">{it.title}</Link>
+                      ) : it.title}
+                    </td>
+                    <td className="muted">{it.detail ?? '—'}</td>
+                    <td className="muted">{KIND_LABEL[it.kind]}</td>
+                    <td>{due ? <Badge tone={due.tone}>{due.label}</Badge> : <span className="muted">—</span>}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
-    </HomeCard>
+    </HomeSection>
   )
 }

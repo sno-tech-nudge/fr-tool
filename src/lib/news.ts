@@ -14,7 +14,6 @@ export type NewsItem = {
 
 export type NewsRun = {
   checked: number
-  /** Stale orgs left over after the per-call cap — press again for the rest. */
   remaining: number
   found: number
   kept: number
@@ -22,7 +21,12 @@ export type NewsRun = {
   /** Orgs whose news search itself failed (e.g. the source blocked us). */
   unreachable?: number
   fetch_error?: string | null
+  /** Other stale orgs the server went on to fetch in the background. */
+  background?: number
 }
+
+/** Where a background run has got to. */
+export type NewsStatus = { remaining: number; total: number; kept: number }
 
 export const NEWS_CATEGORY: Record<string, string> = {
   csr_budget: 'CSR budget',
@@ -44,9 +48,7 @@ async function reason(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : 'The news service could not be reached.'
 }
 
-export async function refreshNews(
-  mode: 'mine' | 'org' | 'all', organisationId?: string,
-): Promise<NewsRun> {
+export async function refreshNews(mode: 'mine' | 'org', organisationId?: string): Promise<NewsRun> {
   const { data, error } = await supabase.functions.invoke('fr-news', {
     body: { mode, organisation_id: organisationId },
   })
@@ -54,40 +56,35 @@ export async function refreshNews(
   return data as NewsRun
 }
 
-/**
- * The home Refresh: the function handles 40 orgs per call, so keep calling
- * until nothing stale is left. Stops early if a call makes no progress.
- * `onBatch` fires after each call with the running totals.
- */
-export async function refreshAllNews(
-  onBatch?: (total: NewsRun) => void, mode: 'mine' | 'all' = 'mine',
-): Promise<NewsRun> {
-  const total: NewsRun = { checked: 0, remaining: 0, found: 0, kept: 0, failed: 0, unreachable: 0, fetch_error: null }
-  for (let i = 0; i < 25; i++) {
-    const r = await refreshNews(mode)
-    total.checked += r.checked
-    total.found += r.found
-    total.kept += r.kept
-    total.failed = (total.failed ?? 0) + (r.failed ?? 0)
-    total.unreachable = (total.unreachable ?? 0) + (r.unreachable ?? 0)
-    total.fetch_error = r.fetch_error ?? total.fetch_error
-    total.remaining = r.remaining
-    onBatch?.(total)
-    if (r.remaining === 0 || r.checked === 0 || runFailed(r)) break
-  }
-  return total
+/** Super admin: start a background run over every organisation. */
+export async function startAllNews(): Promise<{ started: boolean; remaining: number; total: number }> {
+  const { data, error } = await supabase.functions.invoke('fr-news', { body: { mode: 'all' } })
+  if (error) throw new Error(await reason(error))
+  return data as { started: boolean; remaining: number; total: number }
+}
+
+/** How many orgs are still waiting, and how many headlines were kept since `since`. */
+export async function newsStatus(scope: 'all' | 'live', since?: string): Promise<NewsStatus> {
+  const { data, error } = await supabase.functions.invoke('fr-news', { body: { mode: 'status', scope, since } })
+  if (error) throw new Error(await reason(error))
+  return data as NewsStatus
 }
 
 /** One sentence for a toast, so every refresh button reports alike. */
 export function describeRun(r: NewsRun): string {
-  if (r.checked === 0) return 'Already up to date — checked in the last 6 hours.'
+  if (r.checked === 0) {
+    return r.background
+      ? `Your organisations are up to date. ${r.background} others are updating in the background.`
+      : 'Already up to date — checked in the last 6 hours.'
+  }
   if (r.unreachable && r.unreachable === r.checked) {
     return `Could not search news for any of them: ${r.fetch_error ?? 'the news sources did not answer'}.`
   }
   const base = `Checked ${r.checked} ${r.checked === 1 ? 'organisation' : 'organisations'}: `
     + `${r.found} new ${r.found === 1 ? 'headline' : 'headlines'}, ${r.kept} worth keeping.`
   const blocked = r.unreachable ? ` ${r.unreachable} could not be searched and will be retried.` : ''
-  return r.remaining > 0 ? `${base}${blocked} ${r.remaining} more still to check — press again.` : base + blocked
+  const bg = r.background ? ` ${r.background} other organisations are updating in the background.` : ''
+  return base + blocked + bg
 }
 
 /** A run where nothing could be searched is a failure, not an empty result. */

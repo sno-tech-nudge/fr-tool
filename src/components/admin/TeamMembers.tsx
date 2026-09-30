@@ -11,6 +11,7 @@ type Member = {
   id: string
   user_id: string
   fr_sub_role: 'lead' | 'member' | 'finance'
+  focus: 'hunting' | 'pm' | null
   is_active: boolean
   created_at: string
   employees: Employee | null
@@ -21,6 +22,14 @@ const SUB_ROLES = [
   { value: 'member', label: 'Member' },
   { value: 'finance', label: 'Finance' },
 ] as const
+
+/** Decides whether the Remaining collections tab shows on their home page. */
+const FOCUS = [
+  { value: 'hunting', label: 'Hunting' },
+  { value: 'pm', label: 'Partner management' },
+] as const
+
+const MEMBER_COLS = 'id, user_id, fr_sub_role, focus, is_active, created_at, employees(id, name, email, erp_role)'
 
 /**
  * FR sub-role membership. This layer sits on top of the global ERP roles and
@@ -35,6 +44,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
   const [adding, setAdding] = useState(false)
   const [newUserId, setNewUserId] = useState('')
   const [newRole, setNewRole] = useState<string>('member')
+  const [newFocus, setNewFocus] = useState('')
   const [busy, setBusy] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null)
 
@@ -43,7 +53,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
     setError(null)
     const { data, error: err } = await supabase
       .from('fr_team_members')
-      .select('id, user_id, fr_sub_role, is_active, created_at, employees(id, name, email, erp_role)')
+      .select(MEMBER_COLS)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
     if (err) { setError(err.message); setMembers([]); return }
@@ -68,11 +78,12 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
 
   async function addMember() {
     if (!newUserId) { toast.error('Pick a person first.'); return }
+    if (!newFocus) { toast.error('Choose Hunting or Partner management.'); return }
     setBusy(true)
     const { data, error: err } = await supabase
       .from('fr_team_members')
-      .insert({ user_id: newUserId, fr_sub_role: newRole, is_active: true })
-      .select('id, user_id, fr_sub_role, is_active, created_at, employees(id, name, email, erp_role)')
+      .insert({ user_id: newUserId, fr_sub_role: newRole, focus: newFocus, is_active: true })
+      .select(MEMBER_COLS)
       .single()
     setBusy(false)
     if (err) {
@@ -87,6 +98,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
     setAdding(false)
     setNewUserId('')
     setNewRole('member')
+    setNewFocus('')
     toast.success('Added to the FR team.')
   }
 
@@ -95,7 +107,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
       .from('fr_team_members')
       .update(patch)
       .eq('id', id)
-      .select('id, user_id, fr_sub_role, is_active, created_at, employees(id, name, email, erp_role)')
+      .select(MEMBER_COLS)
       .single()
     if (err) { toast.error(err.message); return }
     setMembers((prev) => (prev ?? []).map((m) => (m.id === id ? (data as unknown as Member) : m)))
@@ -155,6 +167,12 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
                 {SUB_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
               </Select>
             </div>
+            <div style={{ minWidth: 190 }}>
+              <Select label="Team" value={newFocus} onChange={(e) => setNewFocus(e.currentTarget.value)}>
+                <option value="">Choose a team</option>
+                {FOCUS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </Select>
+            </div>
             <Button onClick={() => void addMember()} disabled={busy}>
               {busy ? 'Adding…' : 'Add'}
             </Button>
@@ -174,7 +192,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
           />
         </div>
       ) : members === null ? (
-        <TableSkeleton rows={4} cols={5} />
+        <TableSkeleton rows={4} cols={6} />
       ) : members.length === 0 ? (
         <div className="card">
           <EmptyState
@@ -191,6 +209,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
                 <th>Email</th>
                 <th style={{ width: '140px' }}>ERP role</th>
                 <th style={{ width: '150px' }}>FR role</th>
+                <th style={{ width: '210px' }}>Team</th>
                 <th style={{ width: '110px' }}>Active</th>
                 <th style={{ width: '130px' }}>Added</th>
                 {canEdit ? <th className="col-actions">&nbsp;</th> : null}
@@ -213,6 +232,20 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
                       </Select>
                     ) : (
                       <Badge>{m.fr_sub_role}</Badge>
+                    )}
+                  </td>
+                  <td>
+                    {canEdit ? (
+                      <Select
+                        value={m.focus ?? ''}
+                        aria-label="Team"
+                        onChange={(e) => void updateMember(m.id, { focus: (e.currentTarget.value || null) as Member['focus'] })}
+                      >
+                        <option value="">Not set</option>
+                        {FOCUS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                      </Select>
+                    ) : (
+                      <Badge>{FOCUS.find((f) => f.value === m.focus)?.label ?? 'Not set'}</Badge>
                     )}
                   </td>
                   <td>

@@ -12,6 +12,8 @@ export type FrAccess = {
   employeeId: string | null
   employeeName: string | null
   frSubRole: 'lead' | 'member' | 'finance' | null
+  /** Which half of the job: hunting new donors or managing existing partners. */
+  frFocus: 'hunting' | 'pm' | null
   erpRole: string | null
   error: string | null
 }
@@ -23,6 +25,7 @@ const initial: FrAccess = {
   employeeId: null,
   employeeName: null,
   frSubRole: null,
+  frFocus: null,
   erpRole: null,
   error: null,
 }
@@ -108,6 +111,20 @@ export function useFrAccess(): FrAccess {
           : []
       const activeMembership = membership.find((m) => m.is_active && !m.deleted_at)
 
+      // The team tag is read on its own and allowed to fail: if the column is
+      // missing (SQL not run yet) access must still resolve, not error out.
+      let focus: FrAccess['frFocus'] = null
+      if (employee.data?.id) {
+        const { data: f } = await supabase
+          .from('fr_team_members')
+          .select('focus')
+          .eq('user_id', employee.data.id)
+          .is('deleted_at', null)
+          .maybeSingle()
+        focus = ((f as { focus?: FrAccess['frFocus'] } | null)?.focus) ?? null
+        if (!active) return
+      }
+
       resolvedOnce.current = true
       setState({
         loading: false,
@@ -116,6 +133,7 @@ export function useFrAccess(): FrAccess {
         employeeId: employee.data?.id ?? null,
         employeeName: employee.data?.name ?? null,
         frSubRole: activeMembership?.fr_sub_role ?? null,
+        frFocus: activeMembership ? focus : null,
         erpRole: employee.data?.erp_role ?? null,
         error: rpcError ? rpcError.message : null,
       })
