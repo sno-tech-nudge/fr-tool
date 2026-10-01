@@ -11,6 +11,7 @@ import { useBankAccounts, accountsFor } from '../../hooks/useBankAccounts'
 import { OrganisationPicker } from '../organisations/OrganisationPicker'
 import { ContractUpload } from './ContractUpload'
 import type { ContractFields } from '../../lib/documents'
+import { DictationTextarea } from '../DictationTextarea'
 import {
   evenSchedule, expandTemplate, milestonesFromContractRows,
   type MilestoneDraft, type MilestoneTemplate, type ScheduleRow,
@@ -644,12 +645,7 @@ export function GrantForm({
           </>
         ) : null}
 
-        <Textarea
-          label="Notes"
-          rows={3}
-          value={draft.notes}
-          onChange={(e) => set('notes', e.currentTarget.value)}
-        />
+        <DictationTextarea label="Notes" rows={3} value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )
