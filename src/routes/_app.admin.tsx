@@ -22,7 +22,7 @@ function AdminLayout() {
         <div className="card">
           <p className="empty__title">Managers only</p>
           <p className="empty__body">
-            Reference data can only be changed by an FR manager or an admin.
+            Reference data can only be changed by an FR manager.
           </p>
         </div>
       </div>

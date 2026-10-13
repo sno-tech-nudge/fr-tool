@@ -45,9 +45,9 @@ export function EscalationTimelines() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
 
-  // Nucleus-wide roles only. A fundraising manager may read this but not
-  // change thresholds that apply to the whole team.
-  const canEdit = access.erpRole === 'super_admin' || access.erpRole === 'admin'
+  // Thresholds apply to the whole team, so they are for managers (which
+  // includes super admins). Everyone else can read them.
+  const canEdit = access.isManager
 
   const load = useCallback(async () => {
     if (stages.length === 0) return
@@ -139,7 +139,7 @@ export function EscalationTimelines() {
     <div className="stack">
       {!canEdit ? (
         <p className="chartsub">
-          These apply to the whole team, so only an admin or super admin can change them.
+          These apply to the whole team, so only an FR manager or super admin can change them.
         </p>
       ) : null}
 

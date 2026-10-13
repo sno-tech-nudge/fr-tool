@@ -22,7 +22,7 @@ returns boolean language sql security definer stable set search_path = public as
     where lower(e.email) = lower(auth.jwt() ->> 'email')
       and e.is_active = true
       and (
-        e.erp_role in ('super_admin','admin')
+        e.erp_role = 'super_admin'
         or (e.erp_role = 'manager' and e.managed_module = 'fundraising')
         or exists (
           select 1 from public.fr_team_members ftm
@@ -43,11 +43,11 @@ returns boolean language sql security definer stable set search_path = public as
     where lower(e.email) = lower(auth.jwt() ->> 'email')
       and e.is_active = true
       and (
-        e.erp_role in ('super_admin','admin')
+        e.erp_role = 'super_admin'
         or (e.erp_role = 'manager' and e.managed_module = 'fundraising')
       )
   );
-$$;
+$;
 
 -- ---------- BLOCK 3: the row-level gate ----------
 -- Managers see everything. Everyone else sees a confidential record only if

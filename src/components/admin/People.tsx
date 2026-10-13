@@ -16,7 +16,6 @@ type Person = {
 
 const ERP_ROLES = [
   { value: 'super_admin', label: 'Super admin' },
-  { value: 'admin', label: 'Admin' },
   { value: 'manager', label: 'Manager' },
   { value: 'member', label: 'Member' },
 ] as const
@@ -32,9 +31,7 @@ const MODULES = [{ value: 'fundraising', label: 'Fundraising' }] as const
  */
 function frAccess(p: Person, onTeam: boolean): { tone: 'green' | 'outline'; label: string } {
   if (!p.is_active) return { tone: 'outline', label: 'Inactive' }
-  if (p.erp_role === 'super_admin' || p.erp_role === 'admin') {
-    return { tone: 'green', label: `Via ${p.erp_role === 'admin' ? 'admin' : 'super admin'}` }
-  }
+  if (p.erp_role === 'super_admin') return { tone: 'green', label: 'Via super admin' }
   if (p.erp_role === 'manager' && p.managed_module === 'fundraising') {
     return { tone: 'green', label: 'Via manager' }
   }

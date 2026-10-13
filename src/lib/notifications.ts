@@ -3,7 +3,7 @@
  *
  * Two separate ideas live here and are easy to confuse:
  *  - ESCALATION recipients are roles on a deal, configured once for everybody
- *    by an admin. They decide who gets chased when a deal stops moving.
+ *    by a manager. They decide who gets chased when a deal stops moving.
  *  - CATEGORIES are what an individual can switch on or off for themselves,
  *    per channel.
  */
