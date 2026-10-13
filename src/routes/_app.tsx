@@ -5,6 +5,7 @@ import { Button, Skeleton } from '../components/ui'
 import { useAuth } from '../lib/auth'
 import { useFrAccess } from '../hooks/useFrAccess'
 import { FrAccessProvider } from '../lib/accessContext'
+import { FeedbackButton } from '../components/FeedbackButton'
 
 export const Route = createFileRoute('/_app')({ component: AppLayout })
 
@@ -75,6 +76,8 @@ function AppLayout() {
         <div className="main">
           <Outlet />
         </div>
+        {/* Testing period only — remove this line, or set VITE_FEEDBACK_BUTTON=off, to retire it. */}
+        <FeedbackButton />
       </div>
     </FrAccessProvider>
   )
