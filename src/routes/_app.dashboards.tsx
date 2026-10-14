@@ -1,23 +1,29 @@
+import { useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, Select } from '../components/ui'
+import { Button, Select, useToast } from '../components/ui'
+import { ExportMenu } from '../components/ExportMenu'
 import { LeadershipDashboard } from '../components/dashboards/LeadershipDashboard'
 import { MoneyDashboard } from '../components/dashboards/MoneyDashboard'
-import { CAPITAL_CATEGORIES, GRANT_STATUSES } from '../lib/enums'
-import { fiscalYearOptions, joinFyList, parseFyList, shortFyLabel } from '../lib/fy'
+import { CAPITAL_CATEGORIES, GRANT_STATUSES, labelOf } from '../lib/enums'
+import { QUARTER_OPTIONS, fiscalYearOptions, joinFyList, parseFyList, shortFyLabel } from '../lib/fy'
 import { useAccess } from '../lib/accessContext'
 import { ANY_OWNER, effectiveOwner, ownerParam, ownerSelectValue } from '../lib/ownerFilter'
 import { useEmployees } from '../hooks/useEmployees'
 import { useUrlFilters } from '../hooks/useUrlFilters'
+import { downloadPagePdf } from '../lib/export/pagePdf'
+import { downloadWorkbook, fileSlug, today, type ExportRef, type SheetSpec } from '../lib/export/workbook'
 
 export const Route = createFileRoute('/_app/dashboards')({ component: DashboardsPage })
 
 const DEFAULTS = {
-  view: 'leadership', fy: '', owner: '', category: '', status: '', fcra: '',
+  view: 'leadership', fy: '', quarter: '', owner: '', category: '', status: '', fcra: '',
 }
 
 export type DashboardFilters = {
   /** Comma-separated FY labels; empty means every year. See parseFyList. */
   fy: string
+  /** Comma-separated Q1–Q4, applied alongside the year(s); empty means all. */
+  quarter: string
   owner: string
   category: string
   /** Money dashboard only — Leadership has no notion of grant status/FCRA. */
@@ -45,7 +51,7 @@ function MultiPillGroup({
   label, options, value, onChange, allLabel = 'All',
 }: {
   label: string
-  options: Array<{ value: string; label: string }>
+  options: Array<{ value: string; label: string; title?: string }>
   value: string[]
   onChange: (v: string[]) => void
   allLabel?: string
@@ -67,6 +73,7 @@ function MultiPillGroup({
             className="pill pill--sm"
             data-active={value.includes(o.value)}
             aria-pressed={value.includes(o.value)}
+            title={o.title}
             onClick={() => toggle(o.value)}
           >
             {o.label}
@@ -112,16 +119,63 @@ function PillGroup({
 function DashboardsPage() {
   const { employees } = useEmployees()
   const access = useAccess()
+  const toast = useToast()
+  const pageRef = useRef<HTMLDivElement>(null)
+  const exportRef: ExportRef = useRef<(() => SheetSpec[] | null) | null>(null)
   const { filters, setFilter } = useUrlFilters(DEFAULTS)
   const navigate = useNavigate() as unknown as LooseNavigate
 
   const isMoney = filters.view === 'money'
   const active: DashboardFilters = {
     fy: filters.fy,
+    quarter: filters.quarter,
     owner: effectiveOwner(filters.owner, access.employeeId),
     category: filters.category,
     status: filters.status,
     fcra: filters.fcra,
+  }
+
+  // What the export is called, and what it says was filtered, are built from
+  // the same filters the page is showing.
+  const fyText = parseFyList(filters.fy).join(', ')
+  const quarterText = parseFyList(filters.quarter).join(', ')
+  const dashboardName = isMoney ? 'Grants and money' : 'Leadership'
+  const ownerText = (() => {
+    const id = effectiveOwner(filters.owner, access.employeeId)
+    return id ? employees.find((e) => e.id === id)?.name ?? '—' : 'Anyone'
+  })()
+
+  function filtersSheet(): SheetSpec {
+    const rows: SheetSpec['rows'] = [
+      ['Dashboard', dashboardName],
+      ['Financial year', fyText || 'All years'],
+      ['Quarter', quarterText || 'All quarters'],
+      ['Capital category', filters.category ? labelOf(CAPITAL_CATEGORIES, filters.category) : 'All'],
+    ]
+    if (isMoney) {
+      rows.push(['Grant status', filters.status ? labelOf(GRANT_STATUSES, filters.status) : 'All'])
+      rows.push(['FCRA', filters.fcra === 'yes' ? 'FCRA only' : filters.fcra === 'no' ? 'Domestic only' : 'All'])
+    }
+    rows.push(['Owner', ownerText], ['Exported by', access.employeeName ?? ''], ['Exported on', new Date().toLocaleString('en-GB')])
+    return { name: 'Filters', columns: [{ header: 'Filter', width: 22 }, { header: 'Applied', width: 40 }], rows }
+  }
+
+  const exportName = fileSlug(dashboardName, 'dashboard', fyText || 'All-years', quarterText.replace(/, /g, '-'), today())
+
+  async function exportExcel() {
+    const sheets = exportRef.current?.()
+    if (!sheets) { toast.error('The dashboard is still loading — try again in a moment.'); return }
+    await downloadWorkbook(`${exportName}.xlsx`, [filtersSheet(), ...sheets])
+    toast.success('Excel file downloaded.')
+  }
+
+  async function exportPdf() {
+    const root = pageRef.current
+    if (!root) return
+    const footer = ['The/Nudge Fundraising', `${dashboardName} dashboard`, fyText || 'All years', quarterText, today()]
+      .filter(Boolean).join('  -  ')
+    await downloadPagePdf(root, `${exportName}.pdf`, footer)
+    toast.success('PDF downloaded.')
   }
 
   const fyOptions = fiscalYearOptions().map((fy) => ({ value: fy, label: shortFyLabel(fy) }))
@@ -132,23 +186,24 @@ function DashboardsPage() {
     navigate({
       to: '.',
       search: (prev) => ({
-        ...prev, fy: undefined, owner: undefined, category: undefined,
+        ...prev, fy: undefined, quarter: undefined, owner: undefined, category: undefined,
         status: undefined, fcra: undefined, page: undefined,
       }),
       replace: true,
     })
   }
   const moneyFiltersActive = Boolean(
-    filters.fy || filters.owner || filters.category || filters.status || filters.fcra,
+    filters.fy || filters.quarter || filters.owner || filters.category || filters.status || filters.fcra,
   )
 
   return (
-    <div className="page">
+    <div className="page" ref={pageRef}>
       <div className="page__head">
         <div>
           <h1 className="page__title">Dashboards</h1>
           <p className="page__sub">
-            {parseFyList(filters.fy).join(' · ') || 'All years'}
+            {[parseFyList(filters.fy).join(' · ') || 'All years', parseFyList(filters.quarter).join(', ')]
+              .filter(Boolean).join(' · ')}
           </p>
         </div>
       </div>
@@ -160,6 +215,12 @@ function DashboardsPage() {
           options={fyOptions}
           value={parseFyList(filters.fy)}
           onChange={(list) => setFilter('fy', joinFyList(list))}
+        />
+        <MultiPillGroup
+          label="Quarter"
+          options={QUARTER_OPTIONS}
+          value={parseFyList(filters.quarter)}
+          onChange={(list) => setFilter('quarter', joinFyList(list))}
         />
         <PillGroup
           label="Capital category"
@@ -197,6 +258,8 @@ function DashboardsPage() {
         {isMoney && moneyFiltersActive ? (
           <Button variant="ghost" size="sm" onClick={resetMoneyFilters}>Reset</Button>
         ) : null}
+
+        <ExportMenu onPdf={exportPdf} onExcel={exportExcel} />
       </div>
 
       <nav className="tabs" aria-label="Dashboards">
@@ -212,9 +275,11 @@ function DashboardsPage() {
         ))}
       </nav>
 
-      {isMoney
-        ? <MoneyDashboard filters={active} />
-        : <LeadershipDashboard filters={active} />}
+      <div data-export-content>
+        {isMoney
+          ? <MoneyDashboard filters={active} exportRef={exportRef} />
+          : <LeadershipDashboard filters={active} exportRef={exportRef} />}
+      </div>
     </div>
   )
 }

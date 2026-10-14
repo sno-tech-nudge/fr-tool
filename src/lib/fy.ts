@@ -57,6 +57,14 @@ export function fiscalYearRange(label: string): { from: string; to: string } | n
  * Several FYs can be picked at once; the URL carries them comma-separated so a
  * filtered view stays shareable. FY labels never contain a comma.
  */
+/** Fiscal quarters, April–June first. A filter picks any number of them. */
+export const QUARTER_OPTIONS = [
+  { value: 'Q1', label: 'Q1', title: 'April – June' },
+  { value: 'Q2', label: 'Q2', title: 'July – September' },
+  { value: 'Q3', label: 'Q3', title: 'October – December' },
+  { value: 'Q4', label: 'Q4', title: 'January – March' },
+]
+
 export function parseFyList(value: string | null | undefined): string[] {
   return value ? value.split(',').map((v) => v.trim()).filter(Boolean) : []
 }

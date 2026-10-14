@@ -1,5 +1,5 @@
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { EmptyState, Skeleton } from '../ui'
 import { formatMoney } from '../../lib/format'
@@ -78,7 +78,7 @@ function CountTooltip({ active, payload, label, valueLabel }: {
 }
 
 export function ChartCard({
-  title, subtitle, loading, data, height = 260, emptyBody, actions, children,
+  title, subtitle, loading, data, height = 260, emptyBody, actions, fill, children,
 }: {
   title: string
   subtitle?: string
@@ -89,23 +89,32 @@ export function ChartCard({
   emptyBody?: string
   /** Right-aligned controls in the header row — a group-by toggle, a filter. */
   actions?: React.ReactNode
+  /**
+   * Let the chart take whatever height the card has (it stretches to its row),
+   * with `height` as the minimum — so a card that sits beside a taller one
+   * grows its chart instead of ending in empty space.
+   */
+  fill?: boolean
   children: React.ReactNode
 }) {
   return (
     <section className="card stack">
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
         <div>
           <div className="tn-micro">{title}</div>
           {subtitle ? <p className="chartsub">{subtitle}</p> : null}
         </div>
-        {actions}
+        {/* Never shrunk: a clipped toggle is worse than one that wraps under the title. */}
+        {actions ? <div style={{ flex: '0 0 auto' }}>{actions}</div> : null}
       </div>
       {loading || data === null ? (
         <Skeleton height={height} />
       ) : data.length === 0 ? (
         <EmptyState title="Nothing to show yet" body={emptyBody} />
       ) : (
-        <div style={{ height }}>{children}</div>
+        <div style={fill ? { flex: '1 1 auto', minHeight: height, display: 'flex', flexDirection: 'column' } : { height }}>
+          {children}
+        </div>
       )}
     </section>
   )
@@ -124,6 +133,10 @@ export function HBar({
   money?: boolean
 }) {
   const Tip = money ? ChartTooltip : CountTooltip
+  // The label column fits its longest label (up to 132px) instead of always
+  // reserving 132px — a lone "India" would otherwise leave the bar floating
+  // in the right half of the card.
+  const labelWidth = Math.min(132, Math.max(44, Math.ceil(Math.max(0, ...data.map((d) => d.label.length)) * 6.4) + 12))
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
@@ -138,7 +151,7 @@ export function HBar({
         <YAxis
           type="category"
           dataKey="label"
-          width={132}
+          width={labelWidth}
           {...AXIS}
           axisLine={false}
         />
@@ -185,7 +198,7 @@ export function VBar({
 
 /** A single headline figure. Same visual language as the record-360 cards. */
 export function Kpi({
-  label, value, note, loading, compact,
+  label, value, note, loading, compact, alert,
 }: {
   label: string
   value: React.ReactNode
@@ -193,9 +206,12 @@ export function Kpi({
   loading?: boolean
   /** Smaller padding/type for a dashboard row with several KPIs across. */
   compact?: boolean
+  /** A red outline for money that has gone wrong (overdue), never decoration. */
+  alert?: boolean
 }) {
+  const cls = ['kpi', compact ? 'kpi--compact' : '', alert ? 'kpi--alert' : ''].filter(Boolean).join(' ')
   return (
-    <div className={compact ? 'kpi kpi--compact' : 'kpi'}>
+    <div className={cls}>
       <div className="kpi__label">{label}</div>
       <div className="kpi__value tn-num">
         {loading ? <Skeleton height={compact ? 16 : 20} width={90} /> : value}
@@ -250,6 +266,131 @@ export function GroupedHBar({ data }: { data: PairDatum[] }) {
         />
         <Bar dataKey="committed" fill="var(--chart-1)" radius={[0, 2, 2, 0]} maxBarSize={14} />
         <Bar dataKey="received" fill="var(--rag-green)" radius={[0, 2, 2, 0]} maxBarSize={14} />
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+/**
+ * Share of a whole, as a ring. Callers pass each slice's colour so a category
+ * keeps its colour whatever its rank. The legend beside it carries the label,
+ * amount and share, so the slices never rely on colour alone.
+ */
+export function Donut({
+  data, centerLabel, money = true,
+}: {
+  data: Datum[]
+  centerLabel: string
+  money?: boolean
+}) {
+  const total = data.reduce((s, d) => s + d.value, 0)
+  const fmt = (v: number) => (money ? formatMoney(v) : String(v))
+  return (
+    <div className="donut">
+      <div className="donut__ring">
+        <div className="donut__plot">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Tooltip content={<SliceTooltip money={money} total={total} />} />
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="label"
+                innerRadius="62%"
+                outerRadius="92%"
+                startAngle={90}
+                endAngle={-270}
+                stroke="var(--surface-card)"
+                strokeWidth={2}
+                isAnimationActive={false}
+              >
+                {data.map((d, i) => (
+                  <Cell key={d.label} fill={d.color ?? CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="donut__center" aria-hidden="true">
+          <span className="donut__total tn-num">{fmt(total)}</span>
+          <span className="donut__caption">{centerLabel}</span>
+        </div>
+      </div>
+      <ul className="donut__legend">
+        {data.map((d, i) => (
+          <li key={d.label}>
+            <span className="donut__swatch" style={{ background: d.color ?? CHART_COLORS[i % CHART_COLORS.length] }} />
+            <span className="donut__name">{d.label}</span>
+            <span className="donut__value tn-num">{fmt(d.value)}</span>
+            <span className="donut__share tn-num">{total > 0 ? Math.round((d.value / total) * 100) : 0}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function SliceTooltip({ active, payload, money, total }: {
+  active?: boolean
+  payload?: Array<{ name: string; value: number }>
+  money: boolean
+  total: number
+}) {
+  if (!active || !payload?.length) return null
+  const p = payload[0]
+  return (
+    <div className="charttip">
+      <div className="charttip__label">{p.name}</div>
+      <div className="charttip__value tn-num">
+        {money ? formatMoney(p.value) : p.value}{' '}
+        <span className="faint">{total > 0 ? `${Math.round((p.value / total) * 100)}%` : ''}</span>
+      </div>
+    </div>
+  )
+}
+
+export type Series = { key: string; label: string; color: string }
+
+function SeriesTooltip({ active, payload, label, series }: {
+  active?: boolean
+  payload?: Array<{ value: number; dataKey: string }>
+  label?: string
+  series: Series[]
+}) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="charttip">
+      <div className="charttip__label">{label}</div>
+      {payload.map((p) => (
+        <div key={p.dataKey} className="charttip__value tn-num">
+          {formatMoney(p.value)} <span className="faint">{series.find((s) => s.key === p.dataKey)?.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Side-by-side columns per period — e.g. open vs won by fiscal year. */
+export function GroupedVBar({
+  data, series,
+}: {
+  data: Array<Record<string, string | number>>
+  series: Series[]
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 8 }} barGap={2}>
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="2 4" />
+        <XAxis dataKey="label" {...AXIS} axisLine={{ stroke: 'var(--border)' }} interval={0} />
+        <YAxis {...AXIS} axisLine={false} tickFormatter={axisMoney} />
+        <Tooltip cursor={{ fill: 'var(--surface-sunken)' }} content={<SeriesTooltip series={series} />} />
+        <Legend
+          wrapperStyle={{ fontSize: 11, fontFamily: 'var(--font-sans)' }}
+          formatter={(v: string) => series.find((s) => s.key === v)?.label ?? v}
+        />
+        {series.map((s) => (
+          <Bar key={s.key} dataKey={s.key} fill={s.color} radius={[2, 2, 0, 0]} maxBarSize={22} />
+        ))}
       </BarChart>
     </ResponsiveContainer>
   )
