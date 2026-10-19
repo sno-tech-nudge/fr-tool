@@ -1506,3 +1506,15 @@
 /* A page being drawn to a PDF: no scrollbars in the picture. */
 .exporting, .exporting * { scrollbar-width: none; }
 .exporting *::-webkit-scrollbar { display: none; }
+
+/* A link-looking button (opens a drawer rather than a page). */
+button.celllink {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--action);
+  text-align: left;
+  cursor: pointer;
+}
+button.celllink:hover { text-decoration: underline; }

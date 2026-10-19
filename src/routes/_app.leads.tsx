@@ -8,6 +8,7 @@ import {
 import { Drawer } from '../components/ui'
 import { LeadQuickAdd, type Lead, type LeadSource } from '../components/leads/LeadQuickAdd'
 import { LeadConvertWizard } from '../components/leads/LeadConvertWizard'
+import { LeadDrawer } from '../components/leads/LeadDrawer'
 import { LEAD_REJECTION_REASONS, LEAD_STATUSES, labelOf } from '../lib/enums'
 import { formatDate } from '../lib/format'
 import { useAccess } from '../lib/accessContext'
@@ -43,6 +44,7 @@ function LeadsPage() {
   const [sources, setSources] = useState<LeadSource[]>([])
 
   const [addOpen, setAddOpen] = useState(false)
+  const [viewing, setViewing] = useState<Lead | null>(null)
   const [converting, setConverting] = useState<Lead | null>(null)
   const [rejecting, setRejecting] = useState<Lead | null>(null)
   const [rejectReason, setRejectReason] = useState('not_a_fit')
@@ -73,8 +75,10 @@ function LeadsPage() {
       const s = sanitizeSearch(filters.q)
       q = q.or(`full_name.ilike.%${s}%,org_name.ilike.%${s}%,email.ilike.%${s}%`)
     }
+    // 'all' is a real value rather than an empty one: an empty filter is
+    // dropped from the URL, which would put the page back on the open queue.
     if (filters.status === 'open') q = q.in('status', ['new', 'assigned'])
-    else if (filters.status) q = q.eq('status', filters.status)
+    else if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
     if (filters.owner) q = q.eq('owner_user_id', filters.owner)
 
     const { data, error: err, count } = await q
@@ -143,7 +147,7 @@ function LeadsPage() {
         <SearchInput value={filters.q} onChange={(v) => setFilter('q', v)} placeholder="Search name, org or email" />
         <Select label="Status" value={filters.status} onChange={(e) => setFilter('status', e.currentTarget.value)}>
           <option value="open">Open queue</option>
-          <option value="">All</option>
+          <option value="all">All</option>
           {LEAD_STATUSES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
         <Select label="Owner" value={filters.owner} onChange={(e) => setFilter('owner', e.currentTarget.value)}>
@@ -189,9 +193,25 @@ function LeadsPage() {
                 {rows.map((l) => {
                   const open = l.status === 'new' || l.status === 'assigned'
                   return (
-                    <tr key={l.id}>
+                    <tr
+                      key={l.id}
+                      className="is-clickable"
+                      // The row opens the lead, except where a click belongs to a
+                      // control inside it (owner, Convert, Reject).
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest('button, select, a, input')) return
+                        setViewing(l)
+                      }}
+                    >
                       <td>
-                        {l.full_name}
+                        <button
+                          type="button"
+                          className="celllink"
+                          style={{ background: 'none', border: 0, padding: 0, font: 'inherit', cursor: 'pointer', textAlign: 'left' }}
+                          onClick={() => setViewing(l)}
+                        >
+                          {l.full_name}
+                        </button>
                         <div className="faint" style={{ fontSize: 'var(--text-xs)' }}>
                           {l.email || l.phone || ''}
                         </div>
@@ -249,6 +269,19 @@ function LeadsPage() {
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPage={(p) => setFilter('page', String(p))} />
         </>
       )}
+
+      <LeadDrawer
+        lead={viewing}
+        sources={sources}
+        employees={employees}
+        onClose={() => setViewing(null)}
+        onSaved={(saved) => {
+          setRows((prev) => (prev ?? []).map((r) => (r.id === saved.id ? saved : r)))
+          setViewing((v) => (v && v.id === saved.id ? saved : v))
+        }}
+        onConvert={(l) => { setViewing(null); setConverting(l) }}
+        onReject={(l) => { setViewing(null); setRejecting(l) }}
+      />
 
       <LeadQuickAdd
         open={addOpen}
