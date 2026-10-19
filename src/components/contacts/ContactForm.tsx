@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
-  Button, Checkbox, ConfirmDialog, Drawer, Input, Select, Textarea, useToast,
+  Button, Checkbox, ConfirmDialog, Drawer, Input, Select, useToast,
 } from '../ui'
 import { SENIORITIES } from '../../lib/enums'
 import { useAccess } from '../../lib/accessContext'
 import { useEmployees } from '../../hooks/useEmployees'
 import { OrganisationPicker } from '../organisations/OrganisationPicker'
 import { DocumentLink } from '../DocumentLink'
+import { DictationTextarea } from '../DictationTextarea'
 
 export type Contact = {
   id: string
@@ -304,13 +305,13 @@ export function ContactForm({
             </div>
           </div>
 
-          <Textarea
+          <DictationTextarea
             label="Cultivation notes"
             help="Informal, relationship-building context."
             value={draft.personal_notes}
-            onChange={(e) => set('personal_notes', e.currentTarget.value)}
+            onChange={(v) => set('personal_notes', v)}
           />
-          <Textarea label="Notes" value={draft.notes} onChange={(e) => set('notes', e.currentTarget.value)} />
+          <DictationTextarea label="Notes" value={draft.notes} onChange={(v) => set('notes', v)} />
 
           <Checkbox
             label="Primary contact for this organisation"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Button, Drawer, Input, Select, Textarea, useToast } from '../ui'
+import { Button, Drawer, Input, Select, useToast } from '../ui'
+import { DictationTextarea } from '../DictationTextarea'
 import { DONOR_TYPES } from '../../lib/enums'
 import { useAccess } from '../../lib/accessContext'
 
@@ -157,7 +158,7 @@ export function LeadQuickAdd({
           value={draft.source_detail}
           onChange={(e) => set('source_detail', e.currentTarget.value)}
         />
-        <Textarea label="Notes" value={draft.notes} onChange={(e) => set('notes', e.currentTarget.value)} />
+        <DictationTextarea label="Notes" value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )

@@ -9,9 +9,11 @@ import { useSpeechInput } from '../hooks/useSpeechInput'
  * phrases append to whatever is already typed, so speaking and typing mix.
  */
 export function DictationTextarea({
-  label, value, onChange, rows = 3, placeholder,
+  label, value, onChange, rows = 3, placeholder, help,
 }: {
   label: string
+  /** A line of guidance under the box, as on the other form fields. */
+  help?: string
   value: string
   onChange: (next: string) => void
   rows?: number
@@ -71,6 +73,7 @@ export function DictationTextarea({
         </button>
         <span className="sr-only" aria-live="polite">{speech.listening ? 'Listening' : ''}</span>
       </div>
+      {help ? <span className="field__help">{help}</span> : null}
     </div>
   )
 }
