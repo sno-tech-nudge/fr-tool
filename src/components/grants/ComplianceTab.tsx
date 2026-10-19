@@ -312,7 +312,7 @@ export function ComplianceTab({
               p.submission_date ? 'submitted' : 'upcoming', p.due_date,
             )
             return (
-              <div key={p.id} className="card stack">
+              <div key={p.id} className="card stack pcard">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div>
                     <strong>{p.period_label}</strong>
@@ -353,7 +353,7 @@ export function ComplianceTab({
                     </table>
                   </div>
                 ) : (
-                  <p className="faint">No milestones attached to this period.</p>
+                  <p className="faint pcard__empty">No milestones yet.</p>
                 )}
               </div>
             )
@@ -411,7 +411,7 @@ export function ComplianceTab({
             label="Reporting frequency"
             value={frequency}
             onChange={(e) => setFrequency(e.currentTarget.value)}
-            help={`Across ${formatDate(startDate)} – ${formatDate(endDate)}. Each report falls due 30 days after its window closes.`}
+            help={`${formatDate(startDate)} – ${formatDate(endDate)}`}
           >
             {REPORTING_FREQUENCIES.filter((f) => f.value !== 'ad_hoc')
               .map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -450,7 +450,7 @@ const EMPTY = {
 }
 
 function MilestoneDrawer({
-  open, milestone, grantId, capitalCategory, types, periods, onClose, onSaved,
+  open, milestone, grantId, types, periods, onClose, onSaved,
 }: {
   open: boolean
   milestone: Milestone | null
@@ -540,7 +540,7 @@ function MilestoneDrawer({
           label="Type"
           value={draft.milestone_type_id}
           onChange={(e) => setType(e.currentTarget.value)}
-          help={`Suggested for ${capitalCategory} grants.`}
+          
         >
           <option value="">—</option>
           {types.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -557,7 +557,6 @@ function MilestoneDrawer({
           label="Reporting period"
           value={draft.report_period_id}
           onChange={(e) => set('report_period_id', e.currentTarget.value)}
-          help="Leave blank for a one-off that is not part of a reporting bundle."
         >
           <option value="">—</option>
           {periods.map((p) => <option key={p.id} value={p.id}>{p.period_label}</option>)}

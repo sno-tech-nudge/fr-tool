@@ -376,7 +376,6 @@ export function LeadershipDashboard({ filters, exportRef }: { filters: Dashboard
       <div className="chartgrid">
         <ChartCard
           title="Open pipeline by stage"
-          subtitle="In pipeline order, latest stage at the top"
           data={byStage}
           emptyBody="No open deals match these filters."
           actions={
@@ -416,7 +415,6 @@ export function LeadershipDashboard({ filters, exportRef }: { filters: Dashboard
 
         <ChartCard
           title="Open pipeline by geography"
-          subtitle="Falls back to the donor's country when the deal has none"
           data={data?.byGeography ?? null}
           emptyBody="No open deals match these filters."
         >
@@ -425,7 +423,6 @@ export function LeadershipDashboard({ filters, exportRef }: { filters: Dashboard
 
         <ChartCard
           title="Pipeline by fiscal year"
-          subtitle="Open against won, by expected close"
           data={data?.byFy ?? null}
           emptyBody="No deals match these filters."
         >
@@ -435,7 +432,6 @@ export function LeadershipDashboard({ filters, exportRef }: { filters: Dashboard
         <section className="card stack">
           <div>
             <div className="tn-micro">Win rate by capital category</div>
-            <p className="chartsub">Deals already won or lost</p>
           </div>
           {!data ? (
             <TableSkeleton rows={3} cols={4} />

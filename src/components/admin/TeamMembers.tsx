@@ -137,10 +137,6 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
       <div className="page__head" style={{ marginBottom: 0 }}>
         <div>
           <h2 className="page__title">Team members</h2>
-          <p className="page__sub">
-            FR sub-roles sit on top of global ERP roles. Super admins and the fundraising manager
-            already have full access without appearing here.
-          </p>
         </div>
         {canEdit && !adding ? (
           <Button iconLeft={<Plus size={15} />} onClick={() => setAdding(true)}>Add member</Button>

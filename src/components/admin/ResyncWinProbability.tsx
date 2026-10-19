@@ -76,7 +76,7 @@ export function ResyncWinProbability({ canEdit }: { canEdit: boolean }) {
             ? 'Checking which deals match their stage…'
             : drift === 0
               ? 'Every deal matches the win % set for its stage.'
-              : `${drift} deals carry a different win % from the stage they sit at — usually the value Zoho imported. Applying the config overwrites those.`}
+              : `${drift} deals differ from their stage's win %.`}
         </p>
         <Button
           variant="secondary"

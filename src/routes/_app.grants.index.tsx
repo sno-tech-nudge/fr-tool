@@ -103,7 +103,9 @@ function GrantsPage() {
     if (filters.q) q = q.ilike('fr_organisations.name', `%${sanitizeSearch(filters.q)}%`)
     const owner = effectiveOwner(filters.owner, access.employeeId)
     if (owner) q = q.eq('owner_user_id', owner)
-    if (filters.status) q = q.eq('status', filters.status)
+    // 'all' is a real value: an empty filter is dropped from the URL, which
+    // would put the page back on its default of active grants.
+    if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status)
     if (filters.capital_category) q = q.eq('capital_category', filters.capital_category)
     if (filters.fcra) q = q.eq('is_fcra', filters.fcra === 'yes')
     if (filters.fy) {
@@ -154,7 +156,7 @@ function GrantsPage() {
           placeholder="Search by donor"
         />
         <Select label="Status" value={filters.status} onChange={(e) => setFilter('status', e.currentTarget.value)}>
-          <option value="">All</option>
+          <option value="all">All</option>
           {GRANT_STATUSES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
         <Select label="Owner" value={ownerSelectValue(filters.owner, access.employeeId)} onChange={(e) => setFilter('owner', ownerParam(e.currentTarget.value, access.employeeId))}>

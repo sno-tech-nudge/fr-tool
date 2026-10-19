@@ -442,7 +442,6 @@ function TrancheDrawer({
           label="Condition"
           value={draft.condition_note}
           onChange={(e) => set('condition_note', e.currentTarget.value)}
-          help={draft.trigger_type === 'milestone_based' ? 'What has to happen before this is invoiced.' : undefined}
         />
 
         <Select label="Status" value={draft.status} onChange={(e) => set('status', e.currentTarget.value)}>

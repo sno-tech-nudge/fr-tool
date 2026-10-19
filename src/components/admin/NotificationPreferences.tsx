@@ -116,10 +116,6 @@ export function NotificationPreferences() {
         </table>
       </div>
 
-      <p className="chartsub">
-        Email and Slack have nowhere to deliver to yet — the switches are saved, and start
-        working when those channels are connected. In-app notifications show on the home page.
-      </p>
     </div>
   )
 }

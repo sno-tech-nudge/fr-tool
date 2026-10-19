@@ -386,7 +386,6 @@ export function GrantForm({
               label="Donor organisation"
               value={draft.organisation_id}
               onChange={(v) => set('organisation_id', v)}
-              help="Required. The grant hangs off the donor, not a deal."
             />
             <ContractUpload
               path={contractPath}
@@ -397,7 +396,6 @@ export function GrantForm({
               <Textarea
                 label="Contract summary"
                 rows={7}
-                help="Read from the contract — edit freely. Shown on the grant's overview."
                 value={summary}
                 onChange={(e) => setSummary(e.currentTarget.value)}
               />
@@ -447,7 +445,6 @@ export function GrantForm({
           label="Receiving entity"
           value={draft.bank_account_id}
           onChange={(e) => set('bank_account_id', e.currentTarget.value)}
-          help={draft.is_fcra ? 'FCRA-designated accounts only.' : 'Domestic accounts only.'}
         >
           <option value="">—</option>
           {legalAccounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
@@ -524,7 +521,7 @@ export function GrantForm({
             {scheduleRows ? (
               <>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <span className="chartsub" style={{ margin: 0 }}>Read from the contract.</span>
+                  <span />
                   <Button size="sm" variant="secondary" onClick={() => setScheduleRows(null)}>
                     Split evenly instead
                   </Button>
@@ -578,7 +575,6 @@ export function GrantForm({
                 max={24}
                 value={trancheCount}
                 onChange={(e) => setTrancheCount(e.currentTarget.value)}
-                help="Split evenly across the term. Set 0 to schedule later on the grant page."
               />
             )}
 
@@ -591,10 +587,7 @@ export function GrantForm({
             </div>
 
             {milestones.length === 0 ? (
-              <p className="muted">
-                No milestone template matches this category. Add a row, or add reporting
-                obligations on the grant page later.
-              </p>
+              <p className="muted">No reporting milestones yet.</p>
             ) : milestones.map((m, i) => (
               <div key={i} className="row" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
                 <Checkbox

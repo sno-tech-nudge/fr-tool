@@ -250,7 +250,6 @@ export function StageMoveDialog({
               <Textarea
                 label="Notes"
                 rows={2}
-                help="Optional. Shows against this step in stage history."
                 value={note}
                 onChange={(e) => setNote(e.currentTarget.value)}
               />

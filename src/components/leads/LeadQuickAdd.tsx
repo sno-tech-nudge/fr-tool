@@ -118,7 +118,6 @@ export function LeadQuickAdd({
         <Input label="Full name" required value={draft.full_name} onChange={(e) => set('full_name', e.currentTarget.value)} />
         <Input
           label="Organisation"
-          help="Free text — the organisation does not need to exist yet."
           value={draft.org_name}
           onChange={(e) => set('org_name', e.currentTarget.value)}
         />
@@ -154,7 +153,7 @@ export function LeadQuickAdd({
 
         <Input
           label="Source detail"
-          help="Event name, referrer, database…"
+          placeholder="Event, referrer or database"
           value={draft.source_detail}
           onChange={(e) => set('source_detail', e.currentTarget.value)}
         />

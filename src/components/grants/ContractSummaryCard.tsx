@@ -73,10 +73,7 @@ export function ContractSummaryCard({
           {grant.contract_summary}
         </p>
       ) : (
-        <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          No summary yet. Reading the contract when the grant is created fills this in, or add
-          the key terms by hand.
-        </p>
+        <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>No summary yet.</p>
       )}
     </section>
   )

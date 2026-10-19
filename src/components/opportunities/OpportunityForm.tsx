@@ -234,7 +234,6 @@ export function OpportunityForm({
         <Input
           label="Name"
           required
-          help="Convention: Organisation — Program/Purpose — FY"
           value={draft.name}
           onChange={(e) => set('name', e.currentTarget.value)}
         />
@@ -323,7 +322,6 @@ export function OpportunityForm({
             <Input
               label="Expected close"
               type="date"
-              help="Fiscal year is derived from this."
               value={draft.expected_close_date}
               onChange={(e) => set('expected_close_date', e.currentTarget.value)}
             />

@@ -217,11 +217,6 @@ export function ContactForm({
               <span className="tn-micro">Card on file</span>
               <DocumentLink path={contact.card_image_path} label="View card" />
             </div>
-          ) : cardImagePath ? (
-            <p className="chartsub">
-              Read from the uploaded card. Check every field — photographed digits are the
-              usual casualty.
-            </p>
           ) : null}
 
           <Input
@@ -236,7 +231,6 @@ export function ContactForm({
               label="Organisation"
               value={draft.organisation_id}
               onChange={(v) => set('organisation_id', v)}
-              help="Leave blank for an unaffiliated individual."
             />
           )}
 
@@ -307,7 +301,6 @@ export function ContactForm({
 
           <DictationTextarea
             label="Cultivation notes"
-            help="Informal, relationship-building context."
             value={draft.personal_notes}
             onChange={(v) => set('personal_notes', v)}
           />

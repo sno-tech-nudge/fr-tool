@@ -137,12 +137,6 @@ export function EscalationTimelines() {
 
   return (
     <div className="stack">
-      {!canEdit ? (
-        <p className="chartsub">
-          These apply to the whole team, so only an FR manager or super admin can change them.
-        </p>
-      ) : null}
-
       <div className="tablewrap">
         <table className="table">
           <thead>
@@ -200,12 +194,7 @@ export function EscalationTimelines() {
         </table>
       </div>
 
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <p className="chartsub" style={{ margin: 0 }}>
-          Days count from when the deal entered its stage or last had an activity logged,
-          whichever is later. Checked every morning at 9:00. Leave a threshold blank to never
-          nudge at that stage.
-        </p>
+      <div className="row" style={{ justifyContent: 'flex-end', alignItems: 'center' }}>
         {canEdit ? (
           <Button
             variant="secondary"

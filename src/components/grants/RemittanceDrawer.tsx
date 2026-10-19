@@ -228,9 +228,6 @@ export function RemittanceDrawer({
             required
             value={bankAccountId}
             onChange={(e) => setBankAccountId(e.currentTarget.value)}
-            help={grantIsFcra
-              ? 'This is a foreign contribution, so only FCRA accounts are valid.'
-              : 'This is domestic money, so FCRA accounts are not valid.'}
           >
             <option value="">—</option>
             {legalAccounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}

@@ -164,11 +164,6 @@ export function ContactScanDrawer({
           hidden
           onChange={(e) => accept(e.currentTarget.files?.[0])}
         />
-
-        <p className="chartsub">
-          The card is read into a contact form for you to check before saving. The image stays
-          with the contact.
-        </p>
       </div>
     </Drawer>
   )

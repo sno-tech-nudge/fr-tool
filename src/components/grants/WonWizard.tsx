@@ -457,7 +457,6 @@ export function WonWizard({
                 <Textarea
                   label="Contract summary"
                   rows={7}
-                  help="Read from the contract — edit freely. Shown on the grant's overview."
                   value={summary}
                   onChange={(e) => setSummary(e.currentTarget.value)}
                 />
@@ -498,7 +497,6 @@ export function WonWizard({
                 label="Receiving entity"
                 value={bankAccountId}
                 onChange={(e) => setBankAccountId(e.currentTarget.value)}
-                help={isFcra ? 'FCRA-designated accounts only.' : 'Domestic accounts only.'}
               >
                 <option value="">—</option>
                 {legalAccounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
@@ -566,9 +564,7 @@ export function WonWizard({
               </div>
 
               {allocations.length === 0 ? (
-                <p className="muted">
-                  No programs were attached to this deal. Add a row, or skip and allocate later.
-                </p>
+                <p className="muted">No programs on this deal yet.</p>
               ) : allocations.map((a, i) => (
                 <div key={i} className="row" style={{ gap: 'var(--space-3)', alignItems: 'flex-end' }}>
                   <Select
@@ -679,7 +675,7 @@ export function WonWizard({
                   max={24}
                   value={trancheCount}
                   onChange={(e) => setTrancheCount(e.currentTarget.value)}
-                  help={`${formatMoney(valueNum)} split evenly between ${formatDate(startDate)} and ${formatDate(endDate)}. Set 0 to schedule later.`}
+                  help={`${formatMoney(valueNum)} split evenly between ${formatDate(startDate)} and ${formatDate(endDate)}.`}
                 />
                 {Number(trancheCount) > 0 ? (
                   <p className="muted tn-num">
@@ -702,10 +698,7 @@ export function WonWizard({
               </div>
 
               {milestones.length === 0 ? (
-                <p className="muted">
-                  No milestone template matches this category. Add a row, or add reporting
-                  obligations on the grant page later.
-                </p>
+                <p className="muted">No reporting milestones yet.</p>
               ) : milestones.map((m, i) => (
                 <div key={i} className="row" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
                   <Checkbox

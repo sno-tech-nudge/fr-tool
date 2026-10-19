@@ -25,8 +25,9 @@ function Card({ card, dragging = false }: { card: BoardCard; dragging?: boolean 
       >
         {card.name}
       </Link>
-      <div className="kcard__org">{card.fr_organisations?.name ?? '—'}</div>
+      {/* Organisation, amount and NBD/PM share one line to keep the card short. */}
       <div className="kcard__foot">
+        <span className="kcard__org">{card.fr_organisations?.name ?? '—'}</span>
         <span className="tn-num kcard__amount">{formatMoney(card.amount_inr)}</span>
         {card.deal_category ? <span className="kcard__tag">{card.deal_category}</span> : null}
       </div>

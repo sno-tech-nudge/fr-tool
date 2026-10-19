@@ -248,7 +248,7 @@ export function OrganisationForm({
 
         <Input
           label="CSR focus areas"
-          help="Comma separated"
+          placeholder="Comma separated"
           value={draft.csr_focus_areas}
           onChange={(e) => set('csr_focus_areas', e.currentTarget.value)}
         />

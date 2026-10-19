@@ -307,7 +307,6 @@ export function PicklistEditor({ spec, canEdit }: { spec: PicklistSpec; canEdit:
       <div className="page__head" style={{ marginBottom: 0 }}>
         <div>
           <h2 className="page__title">{spec.title}</h2>
-          {spec.description ? <p className="page__sub">{spec.description}</p> : null}
         </div>
         {canEdit && !adding ? (
           <Button

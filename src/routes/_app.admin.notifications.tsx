@@ -15,10 +15,6 @@ function NotificationsRoute() {
       <section className="card stack">
         <div>
           <div className="tn-micro">Escalation timelines</div>
-          <p className="chartsub" style={{ marginTop: 'var(--space-2)' }}>
-            How long a deal may sit at a stage without an update before it turns amber, then red,
-            and who hears about it.
-          </p>
         </div>
         <EscalationTimelines />
       </section>
@@ -26,9 +22,6 @@ function NotificationsRoute() {
       <section className="card stack">
         <div>
           <div className="tn-micro">My notifications</div>
-          <p className="chartsub" style={{ marginTop: 'var(--space-2)' }}>
-            Yours alone — nobody else sees or sets these.
-          </p>
         </div>
         <NotificationPreferences />
       </section>

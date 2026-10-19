@@ -209,7 +209,7 @@ export function LeadDrawer({
 
         <Input
           label="Source detail"
-          help="Event name, referrer, database…"
+          placeholder="Event, referrer or database"
           value={draft.source_detail}
           onChange={(e) => set('source_detail', e.currentTarget.value)}
         />

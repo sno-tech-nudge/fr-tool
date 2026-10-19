@@ -502,7 +502,6 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
 
       <ChartCard
         title="Cash in, next 12 months"
-        subtitle="Scheduled instalments by month due, revised dates where a tranche has slipped"
         // Empty months are kept so gaps in the calendar stay visible — but if
         // every month is empty there is no calendar, just a bare axis.
         data={data ? (data.cashIn.some((m) => m.value > 0) ? data.cashIn : []) : null}
@@ -514,7 +513,6 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
 
       <ChartCard
         title="Committed vs received"
-        subtitle="Where collection is lagging"
         data={committedVsReceived}
         emptyBody="No grants match these filters."
         height={Math.min(320, Math.max(160, (committedVsReceived?.length ?? 0) * 42 + 40))}
@@ -536,8 +534,8 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
           <div className="tn-micro">Collection by grant</div>
           <p className="chartsub tn-num">
             {data
-              ? `${data.grantCount} grants · ${formatMoney(data.outstanding)} outstanding · most outstanding first`
-              : 'Most outstanding first'}
+              ? `${data.grantCount} grants · ${formatMoney(data.outstanding)} outstanding`
+              : null}
           </p>
         </div>
         {!data ? (
@@ -606,7 +604,6 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
       <div className="chartgrid">
         <ChartCard
           title="FCRA receipts by fiscal year"
-          subtitle="Foreign contribution received, for the FC-4 annual return"
           data={data?.fcraByFy ?? null}
           emptyBody="No foreign contribution has been received yet."
         >
@@ -615,7 +612,6 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
 
         <ChartCard
           title="FCRA receipts by bank"
-          subtitle="Foreign contribution must land in TNF or NLF FCRA"
           data={data?.banks ?? null}
           emptyBody="Money received will be split by receiving entity here."
           actions={data ? (

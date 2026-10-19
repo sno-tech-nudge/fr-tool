@@ -33,10 +33,6 @@ function AdminLayout() {
     <div className="page stack">
       <div>
         <h1 className="page__title">Configuration</h1>
-        <p className="page__sub">
-          Every picklist is a table, so these can change without a migration. Keys are resolution
-          keys — they cannot be edited once rows reference them.
-        </p>
       </div>
 
       <nav className="tabs" aria-label="Configuration sections">

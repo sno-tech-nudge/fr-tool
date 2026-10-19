@@ -105,10 +105,6 @@ export function People() {
     <div className="stack">
       <div>
         <h2 className="page__title">People</h2>
-        <p className="page__sub">
-          ERP roles are Nucleus-wide, not fundraising-only — changing one here changes what that
-          person can do across every module. Super admins only, and nobody can change their own.
-        </p>
       </div>
 
       {error ? (
@@ -185,10 +181,6 @@ export function People() {
         </div>
       )}
 
-      <p className="chartsub">
-        Someone can only sign in once they also have an auth user with the same email — that is
-        created in the Supabase dashboard, and the two ids are expected to differ.
-      </p>
     </div>
   )
 }

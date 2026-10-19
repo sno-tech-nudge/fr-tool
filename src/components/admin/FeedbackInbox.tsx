@@ -51,10 +51,7 @@ export function FeedbackInbox() {
     <div className="stack">
       <div>
         <h2 className="page__title">Feedback</h2>
-        <p className="page__sub">
-          Bugs and ideas sent from the Send feedback button. Marking one done deletes it.
-          {rows && rows.length > 0 ? ` ${rows.length} open.` : ''}
-        </p>
+        {rows && rows.length > 0 ? <p className="page__sub tn-num">{rows.length} open</p> : null}
       </div>
 
       {error ? (

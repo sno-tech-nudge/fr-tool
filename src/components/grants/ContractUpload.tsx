@@ -137,9 +137,6 @@ export function ContractUpload({
         >
           {busy === 'read' ? 'Reading…' : 'Read the contract'}
         </Button>
-        <span className="chartsub" style={{ margin: 0 }}>
-          Fills in the terms below. Check them against the document before creating the grant.
-        </span>
       </div>
     </div>
   )

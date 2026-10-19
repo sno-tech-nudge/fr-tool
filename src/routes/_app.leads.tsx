@@ -138,7 +138,6 @@ function LeadsPage() {
       <div className="page__head">
         <div>
           <h1 className="page__title">Leads</h1>
-          <p className="page__sub">New prospects awaiting triage. Convert a lead to create the organisation and contact.</p>
         </div>
         <Button iconLeft={<Plus size={15} />} onClick={() => setAddOpen(true)}>Capture lead</Button>
       </div>
