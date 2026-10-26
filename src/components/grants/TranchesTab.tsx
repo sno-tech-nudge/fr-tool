@@ -2,13 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { Plus, Trash2, Wand2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
-  Badge, Button, ConfirmDialog, Drawer, EmptyState, Input, Select, TableSkeleton, Textarea, useToast,
+  Badge, Button, ConfirmDialog, Drawer, EmptyState, Input, Select, TableSkeleton, useToast,
 } from '../ui'
 import { RemittanceDrawer, type Remittance } from './RemittanceDrawer'
 import { TRANCHE_STATUSES, TRANCHE_TRIGGERS, labelOf, trancheTone } from '../../lib/enums'
 import { formatDate, formatMoney, toISODate } from '../../lib/format'
 import { daysUntil, isTrancheOverdue } from '../../lib/grants'
 import { useAccess } from '../../lib/accessContext'
+import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 
 export type Tranche = {
   id: string
@@ -326,6 +328,7 @@ function TrancheDrawer({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const [draft, setDraft] = useState(EMPTY)
   const [busy, setBusy] = useState(false)
 
@@ -386,6 +389,10 @@ function TrancheDrawer({
       return
     }
     toast.success(tranche ? 'Saved.' : 'Instalment added.')
+    void notifyMentions({
+      before: tranche?.notes, after: draft.notes, people,
+      parentType: 'grant', parentId: grantId, selfId: access.employeeId,
+    })
     onSaved()
     onClose()
   }
@@ -474,12 +481,7 @@ function TrancheDrawer({
           </>
         ) : null}
 
-        <Textarea
-          label="Notes"
-          rows={3}
-          value={draft.notes}
-          onChange={(e) => set('notes', e.currentTarget.value)}
-        />
+        <DictationTextarea label="Notes" rows={3} mentions value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )

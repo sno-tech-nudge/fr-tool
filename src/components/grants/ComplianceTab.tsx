@@ -2,13 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { Plus, Trash2, Wand2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
-  Badge, Button, ConfirmDialog, Drawer, EmptyState, Input, Select, Skeleton, Textarea, useToast,
+  Badge, Button, ConfirmDialog, Drawer, EmptyState, Input, Select, Skeleton, useToast,
 } from '../ui'
 import { MILESTONE_STATUSES, REPORTING_FREQUENCIES, labelOf } from '../../lib/enums'
 import { formatDate, toISODate } from '../../lib/format'
 import { daysUntil, isEffectivelyOverdue } from '../../lib/grants'
 import { fiscalYear } from '../../lib/fy'
 import { useAccess } from '../../lib/accessContext'
+import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 import { useEmployees } from '../../hooks/useEmployees'
 
 type Period = {
@@ -463,6 +465,7 @@ function MilestoneDrawer({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const { employees } = useEmployees()
   const [draft, setDraft] = useState(EMPTY)
   const [busy, setBusy] = useState(false)
@@ -518,6 +521,10 @@ function MilestoneDrawer({
     setBusy(false)
     if (res.error) { toast.error(res.error.message); return }
     toast.success(milestone ? 'Saved.' : 'Milestone added.')
+    void notifyMentions({
+      before: milestone?.notes, after: draft.notes, people,
+      parentType: 'grant', parentId: grantId, selfId: access.employeeId,
+    })
     onSaved()
     onClose()
   }
@@ -598,12 +605,7 @@ function MilestoneDrawer({
           onChange={(e) => set('document_url', e.currentTarget.value)}
         />
 
-        <Textarea
-          label="Notes"
-          rows={3}
-          value={draft.notes}
-          onChange={(e) => set('notes', e.currentTarget.value)}
-        />
+        <DictationTextarea label="Notes" rows={3} mentions value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )

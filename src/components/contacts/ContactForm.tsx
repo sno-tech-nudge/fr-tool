@@ -10,6 +10,7 @@ import { useEmployees } from '../../hooks/useEmployees'
 import { OrganisationPicker } from '../organisations/OrganisationPicker'
 import { DocumentLink } from '../DocumentLink'
 import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 
 export type Contact = {
   id: string
@@ -101,6 +102,7 @@ export function ContactForm({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const { employees } = useEmployees()
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
@@ -167,6 +169,12 @@ export function ContactForm({
       return
     }
     toast.success(isNew ? 'Contact added.' : 'Saved.')
+    // Both notes boxes can tag people; one notification per newly tagged person.
+    void notifyMentions({
+      before: [contact?.personal_notes, contact?.notes].filter(Boolean).join(' '),
+      after: [draft.personal_notes, draft.notes].filter(Boolean).join(' '),
+      people, parentType: 'contact', parentId: (res.data as Contact).id, selfId: access.employeeId,
+    })
     onSaved(res.data as Contact, isNew)
     onClose()
   }
@@ -300,11 +308,12 @@ export function ContactForm({
           </div>
 
           <DictationTextarea
+            mentions
             label="Cultivation notes"
             value={draft.personal_notes}
             onChange={(v) => set('personal_notes', v)}
           />
-          <DictationTextarea label="Notes" value={draft.notes} onChange={(v) => set('notes', v)} />
+          <DictationTextarea label="Notes" mentions value={draft.notes} onChange={(v) => set('notes', v)} />
 
           <Checkbox
             label="Primary contact for this organisation"

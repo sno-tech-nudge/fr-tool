@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Button, Drawer, Input, Select, useToast } from '../ui'
 import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 import { DONOR_TYPES } from '../../lib/enums'
 import { useAccess } from '../../lib/accessContext'
 
@@ -45,6 +46,7 @@ export function LeadQuickAdd({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const [draft, setDraft] = useState(EMPTY)
   const [sources, setSources] = useState<LeadSource[]>([])
   const [busy, setBusy] = useState(false)
@@ -98,6 +100,10 @@ export function LeadQuickAdd({
     setBusy(false)
     if (error) { toast.error(error.message); return }
     toast.success('Lead captured.')
+    void notifyMentions({
+      before: '', after: (data as Lead).notes, people,
+      parentType: 'lead', parentId: (data as Lead).id, selfId: access.employeeId,
+    })
     onSaved(data as Lead)
     onClose()
   }
@@ -157,7 +163,7 @@ export function LeadQuickAdd({
           value={draft.source_detail}
           onChange={(e) => set('source_detail', e.currentTarget.value)}
         />
-        <DictationTextarea label="Notes" value={draft.notes} onChange={(v) => set('notes', v)} />
+        <DictationTextarea label="Notes" mentions value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )

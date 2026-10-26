@@ -4,6 +4,8 @@ import { Button, Checkbox, Drawer, Input, Select, Textarea, useToast } from '../
 import { DONOR_TYPES, RELATIONSHIP_STATUSES, normalizeName } from '../../lib/enums'
 import { useAccess } from '../../lib/accessContext'
 import { useEmployees } from '../../hooks/useEmployees'
+import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 
 export type Organisation = {
   id: string
@@ -69,6 +71,7 @@ export function OrganisationForm({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const { employees } = useEmployees()
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
@@ -147,6 +150,10 @@ export function OrganisationForm({
     setBusy(false)
     if (res.error) { toast.error(res.error.message); return }
     toast.success(isNew ? 'Organisation added.' : 'Saved.')
+    void notifyMentions({
+      before: organisation?.notes, after: draft.notes, people,
+      parentType: 'organisation', parentId: (res.data as Organisation).id, selfId: access.employeeId,
+    })
     onSaved(res.data as Organisation, isNew)
     onClose()
   }
@@ -254,7 +261,7 @@ export function OrganisationForm({
         />
 
         <Textarea label="Description" value={draft.description} onChange={(e) => set('description', e.currentTarget.value)} />
-        <Textarea label="Notes" value={draft.notes} onChange={(e) => set('notes', e.currentTarget.value)} />
+        <DictationTextarea label="Notes" mentions value={draft.notes} onChange={(v) => set('notes', v)} />
 
         <Checkbox
           label="Confidential"

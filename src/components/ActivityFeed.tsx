@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CalendarDays, Check, Mail, MessageSquare, Mic, Phone, StickyNote } from 'lucide-react'
+import { CalendarDays, Check, Mail, MessageSquare, Mic, Pencil, Phone, StickyNote } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
   Badge, Button, EmptyState, Input, Select, Skeleton, Textarea, useToast,
@@ -9,6 +9,9 @@ import { formatDateTime } from '../lib/format'
 import { useAccess } from '../lib/accessContext'
 import { useEmployees } from '../hooks/useEmployees'
 import { useSpeechInput } from '../hooks/useSpeechInput'
+import { useMentionPicker } from './MentionPicker'
+import { DictationTextarea } from './DictationTextarea'
+import { notifyMentions, useFrPeople } from '../lib/mentions'
 
 type Activity = {
   id: string
@@ -68,6 +71,14 @@ export function ActivityFeed({
     onInterim: setInterim,
   })
   const { error: speechError, clearError: clearSpeechError } = speech
+
+  // Typing "@" in the body offers the fundraising team to tag.
+  const people = useFrPeople()
+  const picker = useMentionPicker({
+    value: body,
+    onChange: (next) => { setInterim(''); setBody(next) },
+    people,
+  })
   useEffect(() => {
     if (!speechError) return
     toast.error(speechError)
@@ -121,11 +132,48 @@ export function ActivityFeed({
     setBusy(false)
     if (err) { toast.error(err.message); return }
     setItems((prev) => [data as Activity, ...(prev ?? [])])
+    void notifyMentions({
+      before: '', after: written, people,
+      parentType, parentId, source: 'activity', selfId: access.employeeId,
+    })
     setSubject('')
     setBody('')
     setInterim('')
     setAssignee('')
     toast.success('Logged.')
+  }
+
+  // ---- editing: whoever logged an entry can correct its subject and body.
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editSubject, setEditSubject] = useState('')
+  const [editBody, setEditBody] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  function startEdit(a: Activity) {
+    setEditingId(a.id)
+    setEditSubject(a.subject ?? '')
+    setEditBody(a.body ?? '')
+  }
+
+  async function saveEdit(a: Activity) {
+    if (!editSubject.trim()) { toast.error('Add a subject.'); return }
+    setSavingEdit(true)
+    const { data, error: err } = await supabase
+      .from('fr_activities')
+      .update({ subject: editSubject.trim(), body: editBody.trim() || null })
+      .eq('id', a.id)
+      .select()
+      .single()
+    setSavingEdit(false)
+    if (err) { toast.error(err.message); return }
+    setItems((prev) => (prev ?? []).map((x) => (x.id === a.id ? (data as Activity) : x)))
+    setEditingId(null)
+    // Only people newly tagged by the edit hear about it.
+    void notifyMentions({
+      before: a.body, after: editBody, people,
+      parentType, parentId, source: 'activity', selfId: access.employeeId,
+    })
+    toast.success('Saved.')
   }
 
   async function toggleTask(a: Activity) {
@@ -179,7 +227,9 @@ export function ActivityFeed({
             placeholder="Body (optional)"
             aria-label="Body"
             onChange={(e) => { setInterim(''); setBody(e.currentTarget.value) }}
+            {...picker.handlers}
           />
+          {picker.popup}
           <div
             className="dictate__halo"
             ref={speech.meterRef}
@@ -252,8 +302,35 @@ export function ActivityFeed({
                     {nameOf(a.assignee_user_id) ? (
                       <span className="feeditem__when">· {nameOf(a.assignee_user_id)}</span>
                     ) : null}
+                    {a.created_by === access.employeeId && editingId !== a.id ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        iconLeft={<Pencil size={13} />}
+                        onClick={() => startEdit(a)}
+                        aria-label="Edit this entry"
+                        style={{ marginLeft: 'auto' }}
+                      >
+                        Edit
+                      </Button>
+                    ) : null}
                   </div>
-                  {a.body ? <p className="feeditem__body">{a.body}</p> : null}
+                  {editingId === a.id ? (
+                    <div className="stack" style={{ gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
+                      <Input
+                        aria-label="Subject"
+                        value={editSubject}
+                        onChange={(e) => setEditSubject(e.currentTarget.value)}
+                      />
+                      <DictationTextarea label="Body" mentions rows={3} value={editBody} onChange={setEditBody} />
+                      <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)} disabled={savingEdit}>Cancel</Button>
+                        <Button size="sm" onClick={() => void saveEdit(a)} disabled={savingEdit}>
+                          {savingEdit ? 'Saving…' : 'Save'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : a.body ? <p className="feeditem__body">{a.body}</p> : null}
                 </div>
               </article>
             ))}

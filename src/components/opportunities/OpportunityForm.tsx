@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Button, Checkbox, Drawer, Input, Select, Textarea, useToast } from '../ui'
+import { Button, Checkbox, Drawer, Input, Select, useToast } from '../ui'
 import {
   CAPITAL_CATEGORIES, DEAL_CATEGORIES, OPPORTUNITY_TYPES,
 } from '../../lib/enums'
@@ -9,6 +9,8 @@ import { useAccess } from '../../lib/accessContext'
 import { useEmployees } from '../../hooks/useEmployees'
 import { usePipelineStages } from '../../hooks/usePipelineStages'
 import { OrganisationPicker } from '../organisations/OrganisationPicker'
+import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 
 export type Opportunity = {
   id: string
@@ -90,6 +92,7 @@ export function OpportunityForm({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const { employees } = useEmployees()
   const { stages } = usePipelineStages()
 
@@ -208,6 +211,10 @@ export function OpportunityForm({
       }
 
       toast.success(isNew ? 'Opportunity added.' : 'Saved.')
+      void notifyMentions({
+        before: opportunity?.notes, after: draft.notes, people,
+        parentType: 'opportunity', parentId: saved.id, selfId: access.employeeId,
+      })
       onSaved(saved, isNew)
       onClose()
     } catch (e) {
@@ -353,7 +360,7 @@ export function OpportunityForm({
         </div>
 
         <Input label="Geography" value={draft.geography} onChange={(e) => set('geography', e.currentTarget.value)} />
-        <Textarea label="Notes" value={draft.notes} onChange={(e) => set('notes', e.currentTarget.value)} />
+        <DictationTextarea label="Notes" mentions value={draft.notes} onChange={(v) => set('notes', v)} />
 
         <Checkbox
           label="Confidential"

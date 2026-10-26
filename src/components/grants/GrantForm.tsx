@@ -12,6 +12,7 @@ import { OrganisationPicker } from '../organisations/OrganisationPicker'
 import { ContractUpload } from './ContractUpload'
 import type { ContractFields } from '../../lib/documents'
 import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 import {
   evenSchedule, expandTemplate, milestonesFromContractRows,
   type MilestoneDraft, type MilestoneTemplate, type ScheduleRow,
@@ -102,6 +103,7 @@ export function GrantForm({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const people = useFrPeople()
   const { employees } = useEmployees()
   const { accounts } = useBankAccounts()
 
@@ -355,6 +357,10 @@ export function GrantForm({
       } else {
         toast.success(isNew ? 'Grant created.' : 'Saved.')
       }
+      void notifyMentions({
+        before: grant?.notes, after: draft.notes, people,
+        parentType: 'grant', parentId: saved.id, selfId: access.employeeId,
+      })
       onSaved(saved)
       onClose()
     } catch (e) {
@@ -638,7 +644,7 @@ export function GrantForm({
           </>
         ) : null}
 
-        <DictationTextarea label="Notes" rows={3} value={draft.notes} onChange={(v) => set('notes', v)} />
+        <DictationTextarea label="Notes" rows={3} mentions value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )

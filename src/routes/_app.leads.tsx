@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
@@ -52,6 +52,23 @@ function LeadsPage() {
   const [busy, setBusy] = useState(false)
 
   const page = Math.max(1, Number(filters.page) || 1)
+
+  // A link can open one lead directly (?lead=<id>), e.g. from a mention.
+  const linkedLeadId = useRouterState({
+    select: (s) => {
+      const v = (s.location.search as Record<string, unknown>).lead
+      return typeof v === 'string' ? v : null
+    },
+  })
+  useEffect(() => {
+    if (!linkedLeadId) return
+    let active = true
+    ;(async () => {
+      const { data } = await supabase.from('fr_leads').select('*').eq('id', linkedLeadId).maybeSingle()
+      if (active && data) setViewing(data as Lead)
+    })()
+    return () => { active = false }
+  }, [linkedLeadId])
 
   useEffect(() => {
     let active = true

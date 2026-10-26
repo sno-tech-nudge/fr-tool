@@ -49,6 +49,8 @@ export function NotificationsRail() {
       .from('fr_notifications')
       .select('id, category, severity, title, body, parent_type, parent_id, created_at, read_at')
       .eq('recipient_user_id', access.employeeId)
+      // Mentions live in the bell, not here.
+      .neq('category', 'mention')
       .is('dismissed_at', null)
       .order('created_at', { ascending: false })
       .limit(20)

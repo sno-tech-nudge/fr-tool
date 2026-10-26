@@ -2,6 +2,8 @@ import { useEffect, useId, useState } from 'react'
 import { Mic } from 'lucide-react'
 import { useToast } from './ui'
 import { useSpeechInput } from '../hooks/useSpeechInput'
+import { useMentionPicker } from './MentionPicker'
+import { useFrPeople } from '../lib/mentions'
 
 /**
  * A labelled textarea with the dictation mic in its top-right corner — the
@@ -9,7 +11,7 @@ import { useSpeechInput } from '../hooks/useSpeechInput'
  * phrases append to whatever is already typed, so speaking and typing mix.
  */
 export function DictationTextarea({
-  label, value, onChange, rows = 3, placeholder, help,
+  label, value, onChange, rows = 3, placeholder, help, mentions = false,
 }: {
   label: string
   /** A line of guidance under the box, as on the other form fields. */
@@ -18,6 +20,8 @@ export function DictationTextarea({
   onChange: (next: string) => void
   rows?: number
   placeholder?: string
+  /** Typing "@" offers the fundraising team to tag. Sending happens on save. */
+  mentions?: boolean
 }) {
   const toast = useToast()
   const id = useId()
@@ -44,6 +48,9 @@ export function DictationTextarea({
     speech.toggle()
   }
 
+  const people = useFrPeople()
+  const picker = useMentionPicker({ value, onChange, people: mentions ? people : [] })
+
   const shown = interim ? (value ? `${value.trimEnd()} ${interim}` : interim) : value
 
   return (
@@ -57,7 +64,9 @@ export function DictationTextarea({
           placeholder={placeholder}
           value={shown}
           onChange={(e) => { setInterim(''); onChange(e.currentTarget.value) }}
+          {...(mentions ? picker.handlers : {})}
         />
+        {mentions ? picker.popup : null}
         <div className="dictate__halo" ref={speech.meterRef} data-listening={speech.listening} aria-hidden="true">
           <span /><span /><span />
         </div>

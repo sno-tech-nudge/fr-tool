@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth'
 import { useFrAccess } from '../hooks/useFrAccess'
 import { FrAccessProvider } from '../lib/accessContext'
 import { FeedbackButton } from '../components/FeedbackButton'
+import { MentionBell } from '../components/MentionBell'
 
 export const Route = createFileRoute('/_app')({ component: AppLayout })
 
@@ -74,6 +75,10 @@ function AppLayout() {
       <div className="app" data-sidebar={sidebarCollapsed ? 'collapsed' : undefined}>
         <Sidebar access={access} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         <div className="main">
+          {/* Floats in the top-right page margin; takes no room from the page. */}
+          <div className="bellslot">
+            <MentionBell />
+          </div>
           <Outlet />
         </div>
         {/* Testing period only — remove this line, or set VITE_FEEDBACK_BUTTON=off, to retire it. */}

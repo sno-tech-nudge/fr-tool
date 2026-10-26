@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { supabase } from '../../lib/supabase'
 import { Badge, Button, DetailList, Drawer, Input, Select, useToast } from '../ui'
 import { DictationTextarea } from '../DictationTextarea'
+import { notifyMentions, useFrPeople } from '../../lib/mentions'
 import { DONOR_TYPES, LEAD_REJECTION_REASONS, LEAD_STATUSES, labelOf } from '../../lib/enums'
 import { formatDate } from '../../lib/format'
 import { useAccess } from '../../lib/accessContext'
@@ -64,6 +65,7 @@ export function LeadDrawer({
   const toast = useToast()
   const access = useAccess()
   const navigate = useNavigate()
+  const people = useFrPeople()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -110,6 +112,10 @@ export function LeadDrawer({
     setBusy(false)
     if (error) { toast.error(error.message); return null }
     const saved = data as Lead
+    void notifyMentions({
+      before: lead.notes, after: saved.notes, people,
+      parentType: 'lead', parentId: saved.id, selfId: access.employeeId,
+    })
     onSaved(saved)
     return saved
   }
@@ -224,7 +230,7 @@ export function LeadDrawer({
           {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </Select>
 
-        <DictationTextarea label="Notes" rows={5} value={draft.notes} onChange={(v) => set('notes', v)} />
+        <DictationTextarea label="Notes" rows={5} mentions value={draft.notes} onChange={(v) => set('notes', v)} />
       </div>
     </Drawer>
   )

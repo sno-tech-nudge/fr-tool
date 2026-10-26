@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { AlertTriangle, ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
@@ -45,6 +45,11 @@ function OpportunityDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('overview')
+  // A link can open a tab directly (?tab=activity), e.g. from a mention.
+  const tabParam = useRouterState({ select: (s) => (s.location.search as Record<string, unknown>).tab })
+  useEffect(() => {
+    if (typeof tabParam === 'string' && TABS.some((t) => t.key === tabParam)) setTab(tabParam as Tab)
+  }, [tabParam])
   const [editOpen, setEditOpen] = useState(false)
   const [pendingStage, setPendingStage] = useState<Stage | null>(null)
   const [moving, setMoving] = useState(false)
