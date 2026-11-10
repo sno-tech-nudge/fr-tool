@@ -28,3 +28,8 @@ scripts/
 Thumbs.db
 .vscode/
 .idea/
+
+# ---- one-off data migrations (run by hand, kept local) ----
+# Zoho document export → fr_documents: table SQL and the import function
+sql/phase5/documents.sql
+supabase/functions/fr-doc-import/

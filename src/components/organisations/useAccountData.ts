@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { currentFiscalYear } from '../../lib/fy'
 import { isEffectivelyOverdue } from '../../lib/grants'
+import { loadHealthRules } from '../../lib/healthRules'
 
 /**
  * Everything the organisation Overview's account plan reads, worked out from
@@ -29,6 +30,8 @@ export type AccountPlan = {
   health_relationship: Rag | null
   health_renewal: Rag | null
   donor_delight_score: number | null
+  /** "YYYY-MM" while editing; stored as the first of that month. */
+  partner_since: string | null
 }
 
 export type PlanContact = {
@@ -86,6 +89,7 @@ export const EMPTY_PLAN = (organisationId: string): AccountPlan => ({
   aspiration_programs: null, aspiration_notes: null, health_collection: null,
   health_compliance: null, health_relationship: null, health_renewal: null,
   donor_delight_score: null,
+  partner_since: null,
 })
 
 type GrantRow = {
@@ -130,13 +134,25 @@ function renewalCycleFrom(grants: GrantRow[]): string | null {
   return avg <= 1 ? 'Annual' : `Every ${avg} years`
 }
 
+/** The stored row in the shape the form edits: partner_since as "YYYY-MM". */
+function toPlan(row: AccountPlan | null, organisationId: string): AccountPlan {
+  if (!row) return EMPTY_PLAN(organisationId)
+  return { ...EMPTY_PLAN(organisationId), ...row, partner_since: row.partner_since ? row.partner_since.slice(0, 7) : null }
+}
+
+/** The most common rating; a tie goes to the worse one. */
+function majority(rags: Rag[]): Rag {
+  const n = (r: Rag) => rags.filter((x) => x === r).length
+  return (['red', 'amber', 'green'] as Rag[]).reduce((best, r) => (n(r) > n(best) ? r : best), 'red')
+}
+
 export function useAccountData(organisationId: string) {
   const [data, setData] = useState<AccountData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setError(null)
-    const [grantsRes, tranchesRes, remitsRes, oppsRes, contactsRes, planRes, budgetsRes] = await Promise.all([
+    const [grantsRes, tranchesRes, remitsRes, oppsRes, contactsRes, planRes, budgetsRes, rules] = await Promise.all([
       supabase.from('v_fr_grant_facts')
         .select('id, total_value_inr, received_inr, start_date, end_date, signed_date, status, bank_label')
         .eq('organisation_id', organisationId),
@@ -154,6 +170,7 @@ export function useAccountData(organisationId: string) {
         .eq('organisation_id', organisationId).is('deleted_at', null).order('full_name'),
       supabase.from('fr_org_account_plans').select('*').eq('organisation_id', organisationId).maybeSingle(),
       supabase.from('fr_org_csr_budgets').select('fiscal_year, budget_inr').eq('organisation_id', organisationId),
+      loadHealthRules(),
     ])
     const firstError = grantsRes.error ?? tranchesRes.error ?? remitsRes.error ?? oppsRes.error
     if (firstError) { setError(firstError.message); return }
@@ -215,28 +232,32 @@ export function useAccountData(organisationId: string) {
       })
     }
 
-    // ---- Auto health
+    // ---- Auto health, by the thresholds in Configuration → Health rules
     const today = new Date().toISOString().slice(0, 10)
+    const daysFromNow = (d: string) => (new Date(d).getTime() - Date.now()) / 864e5
     const dueSoFar = tranches.filter((t) => t.status !== 'cancelled' && t.effective_due_date && t.effective_due_date <= today)
     const dueAmt = sum(dueSoFar.map((t) => Number(t.amount_inr_expected ?? 0)))
     const gotAmt = sum(dueSoFar.map((t) => Number(t.received_inr ?? 0)))
     const collectionRatio = dueAmt ? gotAmt / dueAmt : null
     const collection: Rag | null = collectionRatio == null ? null
-      : collectionRatio >= 0.9 ? 'green' : collectionRatio >= 0.6 ? 'amber' : 'red'
+      : collectionRatio * 100 >= rules.collection_green_pct ? 'green'
+      : collectionRatio * 100 >= rules.collection_amber_pct ? 'amber' : 'red'
 
     const overdueMs = milestones.filter((m) => isEffectivelyOverdue(m.status, m.due_date) || m.status === 'overdue')
+    const lateBeyondGrace = overdueMs.some((m) => !m.due_date || -daysFromNow(m.due_date) > rules.compliance_red_after_days)
     const soonMs = milestones.filter((m) => m.status === 'upcoming' && m.due_date && m.due_date >= today
-      && (new Date(m.due_date).getTime() - Date.now()) / 864e5 <= 30)
+      && daysFromNow(m.due_date) <= rules.compliance_amber_within_days)
     const compliance: Rag | null = milestones.length === 0 ? null
-      : overdueMs.length ? 'red' : soonMs.length ? 'amber' : 'green'
+      : lateBeyondGrace ? 'red' : overdueMs.length || soonMs.length ? 'amber' : 'green'
 
     const openRenewal = opps.some((o) => o.is_open && (o.opportunity_type === 'renewal' || o.opportunity_type === 'upsell'))
     const endingSoon = grants.some((g) => g.end_date && g.end_date >= today
-      && (new Date(g.end_date).getTime() - Date.now()) / 864e5 <= 180)
+      && daysFromNow(g.end_date) <= rules.renewal_amber_within_days)
     const renewal: Rag | null = openRenewal ? 'green' : endingSoon ? 'amber' : null
 
     const ragContacts = contacts.map((c) => c.relationship_rag).filter(Boolean) as Rag[]
     const relationship: Rag | null = ragContacts.length === 0 ? null
+      : rules.relationship_rule === 'majority' ? majority(ragContacts)
       : ragContacts.includes('red') ? 'red' : ragContacts.includes('amber') ? 'amber' : 'green'
 
     const starts = grants.map((g) => g.start_date ?? g.signed_date).filter(Boolean).sort() as string[]
@@ -245,7 +266,7 @@ export function useAccountData(organisationId: string) {
     const wonDates = opps.filter((o) => o.is_won).map((o) => o.expected_close_date).filter(Boolean).sort() as string[]
 
     setData({
-      plan: planMissing ? null : ((planRes.data as AccountPlan | null) ?? EMPTY_PLAN(organisationId)),
+      plan: planMissing ? null : toPlan(planRes.data as AccountPlan | null, organisationId),
       planMissing,
       budgets,
       contacts,

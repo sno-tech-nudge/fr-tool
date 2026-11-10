@@ -62,6 +62,11 @@ function AdminLayout() {
           </Link>
         ) : null}
         {access.erpRole === 'super_admin' ? (
+          <Link to="/admin/health" className="tab" data-active={pathname === '/admin/health'}>
+            Health rules
+          </Link>
+        ) : null}
+        {access.erpRole === 'super_admin' ? (
           <Link to="/admin/feedback" className="tab" data-active={pathname === '/admin/feedback'}>
             Feedback
           </Link>

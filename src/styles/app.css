@@ -302,6 +302,7 @@
   margin-top: 0;
 }
 .kpi--compact { padding: var(--space-3) var(--space-4); }
+.rechead .kpirow--compact { grid-template-columns: repeat(auto-fill, minmax(170px, 220px)); margin-top: var(--space-5); }
 .kpi--compact .kpi__label { font-size: var(--text-2xs); }
 .kpi--compact .kpi__value { font-size: var(--text-lg); margin-top: 2px; }
 .kpi--compact .kpi__note { font-size: var(--text-xs); }
@@ -1567,25 +1568,25 @@ button.celllink:hover { text-decoration: underline; }
    Chromium only honours these when scrollbar-width/-color are left at auto;
    other browsers keep the plain thin line set above. */
 @supports selector(::-webkit-scrollbar) {
-  .tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard { scrollbar-width: auto; scrollbar-color: auto; }
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar { width: 12px; height: 12px; }
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar-track,
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar-corner { background: transparent; }
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar-button { display: none; }
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar-thumb {
+  .tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack { scrollbar-width: auto; scrollbar-color: auto; }
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar { width: 12px; height: 12px; }
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar-track,
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar-corner { background: transparent; }
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar-button { display: none; }
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar-thumb {
     background: var(--border);
     background-clip: padding-box;
     border: 4px solid transparent;
     border-radius: 999px;
   }
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar-thumb:hover,
-  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar-thumb:active {
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar-thumb:hover,
+  :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar-thumb:active {
     background: var(--brown-400);
     background-clip: padding-box;
     border-width: 2px;
   }
   /* Still none in a PDF snapshot. */
-  .exporting :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard)::-webkit-scrollbar { display: none; }
+  .exporting :is(.tabs, .tablewrap, .homesec__scroll, .tablescroll, .fillscroll__inner, .page--board .kcol__body, .kboard, .kvlist--stack)::-webkit-scrollbar { display: none; }
 }
 
 /* ---------- @mentions: the picker and the bell ---------- */
@@ -1725,33 +1726,34 @@ button.celllink:hover { text-decoration: underline; }
 .bell__when { font-size: var(--text-2xs); color: var(--text-faint); }
 
 /* ---------- organisation account plan (Overview tab) ---------- */
-.acctstrip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-6);
-  margin: 0;
+/* Header facts and the health line share one card. */
+.acctsummary {
   padding: var(--space-4) var(--space-5);
   background: var(--surface);
   border: var(--border-width) solid var(--border);
   border-radius: var(--radius-md);
 }
+.acctstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  margin: 0;
+}
 .acctstrip__item { min-width: 0; flex: 0 1 auto; }
 .acctstrip__item dd { margin: 2px 0 0; font-size: var(--text-sm); color: var(--text); font-weight: var(--weight-regular); overflow-wrap: anywhere; }
 .acctstrip__item dd[data-empty] { color: var(--text-faint); }
 
-.acctgrid { display: grid; gap: var(--space-4); align-items: start; }
+/* Cards in a row share one height, so their edges line up. */
+.acctgrid { display: grid; gap: var(--space-4); align-items: stretch; }
 .acctgrid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.acctgrid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
-/* The notes box fills its column, so the row ends level. */
-.acctnotescard, .acctnotes, .acctnotes .field, .acctnotes .dictate { display: flex; flex-direction: column; flex: 1 1 auto; }
-.acctnotes .textarea { flex: 1 1 auto; resize: none; }
+.acctgrid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .acctnotes .field__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 @media (max-width: 1000px) { .acctgrid--3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 760px) { .acctgrid--2, .acctgrid--3 { grid-template-columns: 1fr; } }
 
 .acctchart { position: relative; display: flex; flex-direction: column; gap: var(--space-3); }
 .acctchart__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 28px; }
-.acctchart__body { height: 210px; }
+.acctchart__body { height: 150px; }
 /* Missing data: the chart stays as a faded backdrop behind the question. */
 .acctchart__body[data-ghost] { opacity: 0.14; filter: grayscale(1); pointer-events: none; }
 .acctchart__ask {
@@ -1769,11 +1771,16 @@ button.celllink:hover { text-decoration: underline; }
 .acctchart__input { display: flex; flex-direction: column; gap: 2px; }
 .acctchart__input .input { width: 76px; padding-inline: var(--space-2); background: var(--surface); }
 
-.accthealth { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4); padding-block: var(--space-4); }
-.accthealth__item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.accthealth {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4);
+  margin-top: var(--space-3); padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--border);
+}
+.accthealth__item { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+@media (max-width: 760px) { .accthealth { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .accthealth { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .accthealth__score { display: inline-flex; align-items: center; gap: var(--space-2); }
-.accthealth__score .input { width: 64px; padding-inline: var(--space-2); }
+.accthealth__score .input { width: 52px; height: 24px; padding: 0 var(--space-2); font-size: var(--text-sm); }
 
 .ragpick { display: inline-flex; gap: 6px; }
 .ragpick__dot {
@@ -1792,12 +1799,111 @@ button.celllink:hover { text-decoration: underline; }
 .ragpick__dot[data-auto] { opacity: 0.55; }
 .ragpick__dot:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
 
-.acctfacts { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-4); margin: 0; font-size: var(--text-sm); }
-.acctfacts dt { color: var(--text-muted); }
-.acctfacts dd { margin: 0; color: var(--text); }
+.acctcard { display: flex; flex-direction: column; gap: var(--space-3); }
+/* Next steps fills its card at a fixed size; longer notes scroll inside it. */
+.acctnotes, .acctnotes .field, .acctnotes .dictate { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.acctnotes .textarea { flex: 1 1 auto; height: 0; min-height: 120px; resize: none; overflow-y: auto; font-size: var(--text-sm); font-weight: var(--weight-regular); }
+
+/* Label/value lines: values read as plain text and only look like a field
+   on hover or while being edited. */
+.kvlist { display: flex; flex-direction: column; }
+.kv {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: 6px 0;
+  border-top: var(--border-width) solid var(--border);
+  font-size: var(--text-sm);
+}
+.kv:first-child { border-top: 0; }
+.kv__label { color: var(--text-muted); padding-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: var(--leading-snug, 1.35); }
+.kv__value { min-width: 0; }
+.kv__text { display: block; padding: 5px 8px; color: var(--text); }
+.kv__input {
+  width: 100%;
+  margin: 0;
+  padding: 4px 8px;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-weight: var(--weight-regular);
+  color: var(--text);
+  line-height: var(--leading-snug, 1.35);
+}
+.kv__input::placeholder { color: transparent; }
+.kv__input:placeholder-shown { background: var(--surface-sunken); }
+.kv__input:placeholder-shown:not(:focus):hover { background: color-mix(in srgb, var(--surface-sunken) 80%, var(--border)); }
+.kv__input:hover { background: var(--surface-sunken); }
+/* Editing keeps the soft fill; the thin outline and the cursor mark the field. */
+.kv__input:focus { outline: none; background: var(--surface-sunken); border-color: var(--border-strong, var(--border)); box-shadow: none; }
+.kv__input--multi { resize: none; field-sizing: content; min-height: calc(2lh + 10px); max-height: calc(5lh + 10px); overflow-y: auto; }
+.kv__input--multi:placeholder-shown:not(:focus) { min-height: 0; }
+.kv__select { appearance: none; cursor: pointer; color: var(--text-faint); }
+.kv__select:focus { color: var(--text); }
+.kv__money { display: flex; align-items: center; gap: var(--space-2); }
+.kv__money .kv__input { width: 7ch; }
+.kv .acctpeople { padding: 3px 0 2px 8px; }
 
 .acctpeople { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .acctpeople li { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); }
 .acctpeople__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .acctpeople__x { display: grid; place-items: center; padding: 2px; border: 0; background: none; color: var(--text-faint); cursor: pointer; border-radius: var(--radius-sm); }
 .acctpeople__x:hover { color: var(--text); background: var(--surface-sunken); }
+
+/* ---------- documents ---------- */
+.doclink {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: var(--action); text-align: left;
+}
+.doclink:hover span { text-decoration: underline; }
+.doclink svg { flex: 0 0 auto; color: var(--text-faint); }
+.doclink__size { margin-left: var(--space-2); font-size: var(--text-xs); white-space: nowrap; }
+
+/* ---------- health rules (Configuration) ---------- */
+.rulestable td { vertical-align: middle; }
+.rulesub { font-size: var(--text-xs); margin-top: 2px; }
+.rulerow { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.rulenum { display: inline-flex; align-items: center; gap: var(--space-1); }
+.rulenum .input { width: 64px; padding: 4px 8px; }
+.rulesel { width: auto; min-width: 260px; }
+.ragdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; }
+.ragdot[data-rag='green'] { background: var(--rag-green); }
+.ragdot[data-rag='amber'] { background: var(--rag-amber); }
+.ragdot[data-rag='red'] { background: var(--rag-red); }
+
+/* Contact search on the account plan's people lists */
+.contactsearch { position: relative; }
+.contactsearch__list { position: fixed; max-height: 280px; overflow-y: auto; }
+.contactsearch__new { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--action); }
+.kv__input[type='month'] { max-width: 180px; }
+
+/* Plan cards: four squares in a row. Fields stack, label above value, so
+   they fit a narrow card; a card grows past square only if its content must. */
+/* Fixed-height cards: the same size whatever they hold. Anything longer
+   scrolls inside its card instead of stretching the row. */
+.acctgrid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 244px; }
+@media (max-width: 1100px) { .acctgrid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .acctgrid--4 { grid-template-columns: 1fr; } }
+.acctcard--square { padding: var(--space-4); gap: var(--space-2); min-width: 0; min-height: 0; overflow: hidden; }
+.acctcard--square > .kvlist { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.kvlist--stack .kv { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 0; font-size: var(--text-xs); border-top: 0; }
+/* Two short fields sharing one line, each with its own label. */
+.kvpair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.kvpair .kv { border-top: 0; }
+.kvlist > .kvpair:first-child { border-top: 0; }
+.kvlist--stack .kv__label {
+  padding: 0 0 1px 6px;
+  line-height: 1.2;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+.kvlist--stack .kv__input, .kvlist--stack .kv__text { padding: 1px 6px; font-size: var(--text-sm); line-height: 1.3; }
+.kvlist--stack .acctpeople { padding: 2px 0 2px 6px; }
+.kvlist--stack .acctpeople li { gap: var(--space-2); }
+.ragcycle { flex: 0 0 auto; }
+.ragcycle:not([data-rag]) { --_c: var(--text-faint); border-style: dashed; }

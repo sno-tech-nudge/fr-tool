@@ -22,6 +22,7 @@ import { Route as AppOrganisationsRouteImport } from './routes/_app.organisation
 import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
 import { Route as AppAdminSlugRouteImport } from './routes/_app.admin.$slug'
 import { Route as AppAdminFeedbackRouteImport } from './routes/_app.admin.feedback'
+import { Route as AppAdminHealthRouteImport } from './routes/_app.admin.health'
 import { Route as AppAdminNotificationsRouteImport } from './routes/_app.admin.notifications'
 import { Route as AppAdminPeopleRouteImport } from './routes/_app.admin.people'
 import { Route as AppAdminTeamRouteImport } from './routes/_app.admin.team'
@@ -96,6 +97,11 @@ const AppAdminFeedbackRoute = AppAdminFeedbackRouteImport.update({
   path: '/feedback',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminHealthRoute = AppAdminHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminNotificationsRoute = AppAdminNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/organisations': typeof AppOrganisationsRouteWithChildren
   '/admin/$slug': typeof AppAdminSlugRoute
   '/admin/feedback': typeof AppAdminFeedbackRoute
+  '/admin/health': typeof AppAdminHealthRoute
   '/admin/notifications': typeof AppAdminNotificationsRoute
   '/admin/people': typeof AppAdminPeopleRoute
   '/admin/team': typeof AppAdminTeamRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/admin/$slug': typeof AppAdminSlugRoute
   '/admin/feedback': typeof AppAdminFeedbackRoute
+  '/admin/health': typeof AppAdminHealthRoute
   '/admin/notifications': typeof AppAdminNotificationsRoute
   '/admin/people': typeof AppAdminPeopleRoute
   '/admin/team': typeof AppAdminTeamRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/admin/$slug': typeof AppAdminSlugRoute
   '/_app/admin/feedback': typeof AppAdminFeedbackRoute
+  '/_app/admin/health': typeof AppAdminHealthRoute
   '/_app/admin/notifications': typeof AppAdminNotificationsRoute
   '/_app/admin/people': typeof AppAdminPeopleRoute
   '/_app/admin/team': typeof AppAdminTeamRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/organisations'
     | '/admin/$slug'
     | '/admin/feedback'
+    | '/admin/health'
     | '/admin/notifications'
     | '/admin/people'
     | '/admin/team'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/$slug'
     | '/admin/feedback'
+    | '/admin/health'
     | '/admin/notifications'
     | '/admin/people'
     | '/admin/team'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/admin/$slug'
     | '/_app/admin/feedback'
+    | '/_app/admin/health'
     | '/_app/admin/notifications'
     | '/_app/admin/people'
     | '/_app/admin/team'
@@ -376,6 +388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminFeedbackRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/health': {
+      id: '/_app/admin/health'
+      path: '/health'
+      fullPath: '/admin/health'
+      preLoaderRoute: typeof AppAdminHealthRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/notifications': {
       id: '/_app/admin/notifications'
       path: '/notifications'
@@ -445,6 +464,7 @@ declare module '@tanstack/react-router' {
 interface AppAdminRouteChildren {
   AppAdminSlugRoute: typeof AppAdminSlugRoute
   AppAdminFeedbackRoute: typeof AppAdminFeedbackRoute
+  AppAdminHealthRoute: typeof AppAdminHealthRoute
   AppAdminNotificationsRoute: typeof AppAdminNotificationsRoute
   AppAdminPeopleRoute: typeof AppAdminPeopleRoute
   AppAdminTeamRoute: typeof AppAdminTeamRoute
@@ -454,6 +474,7 @@ interface AppAdminRouteChildren {
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminSlugRoute: AppAdminSlugRoute,
   AppAdminFeedbackRoute: AppAdminFeedbackRoute,
+  AppAdminHealthRoute: AppAdminHealthRoute,
   AppAdminNotificationsRoute: AppAdminNotificationsRoute,
   AppAdminPeopleRoute: AppAdminPeopleRoute,
   AppAdminTeamRoute: AppAdminTeamRoute,

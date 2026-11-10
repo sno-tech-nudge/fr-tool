@@ -8,6 +8,8 @@ import { notifyMentions, useFrPeople } from '../../lib/mentions'
 import { DONOR_TYPES, labelOf } from '../../lib/enums'
 import { formatMoney } from '../../lib/format'
 import type { Organisation } from './OrganisationForm'
+import { ContactForm, type Contact } from '../contacts/ContactForm'
+import { ContactSearch } from './ContactSearch'
 import { CollectionCard, WalletShareCard } from './AccountCharts'
 import {
   EMPTY_PLAN, useAccountData, type AccountPlan, type PlanContact, type Rag,
@@ -55,6 +57,8 @@ export function AccountOverview({ org, ownerName }: { org: Organisation; ownerNa
       for (const k of changed) {
         const v = draft[k]
         patch[k] = typeof v === 'string' ? (v.trim() || null) : v
+        // The month picker gives "YYYY-MM"; the column is a date.
+        if (k === 'partner_since' && patch[k]) patch[k] = `${patch[k]}-01`
       }
       if (!base.id) patch.created_by = access.employeeId
       const { data: row, error: err } = await supabase
@@ -99,21 +103,58 @@ export function AccountOverview({ org, ownerName }: { org: Organisation; ownerNa
     { key: 'health_renewal', label: 'Renewal / upsell', auto: auto.renewal },
   ]
 
+  /** Replaces the contact, or adds it when it was just created. */
   function patchContact(next: PlanContact) {
-    setData((d) => (d ? { ...d, contacts: d.contacts.map((c) => (c.id === next.id ? next : c)) } : d))
+    setData((d) => {
+      if (!d) return d
+      const known = d.contacts.some((c) => c.id === next.id)
+      return { ...d, contacts: known ? d.contacts.map((c) => (c.id === next.id ? next : c)) : [...d.contacts, next] }
+    })
   }
 
   return (
     <div className="stack acct">
-      <dl className="acctstrip">
-        <StripItem label="Period" value={h.from || h.to ? `${monthYear(h.from) ?? '—'} – ${monthYear(h.to) ?? '—'}` : null} />
-        <StripItem label="Committed" value={h.committed ? formatMoney(h.committed) : null} num />
-        <StripItem label="Received" value={h.committed ? formatMoney(h.received) : null} num />
-        <StripItem label="Programs" value={h.programs.join(', ') || null} />
-        <StripItem label="States" value={h.states.join(', ') || null} />
-        <StripItem label="Owner" value={ownerName !== '—' ? ownerName : null} />
-        <StripItem label="Entity" value={h.entities.join(', ') || null} />
-      </dl>
+      <section className="acctsummary">
+        <dl className="acctstrip">
+          <StripItem label="Period" value={h.from || h.to ? `${monthYear(h.from) ?? '—'} – ${monthYear(h.to) ?? '—'}` : null} />
+          <StripItem label="Committed" value={h.committed ? formatMoney(h.committed) : null} num />
+          <StripItem label="Received" value={h.committed ? formatMoney(h.received) : null} num />
+          <StripItem label="Programs" value={h.programs.join(', ') || null} />
+          <StripItem label="States" value={h.states.join(', ') || null} />
+          <StripItem label="Owner" value={ownerName !== '—' ? ownerName : null} />
+          <StripItem label="Entity" value={h.entities.join(', ') || null} />
+        </dl>
+        <div className="accthealth">
+          {health.map((it) => (
+            <div key={it.key} className="accthealth__item">
+              <span className="tn-micro">{it.label}</span>
+              <RagPicker
+                value={draft[it.key]}
+                auto={it.auto}
+                onChange={(v) => (edit ? edit() : setDraft((d) => ({ ...d, [it.key]: v })))}
+              />
+            </div>
+          ))}
+          <div className="accthealth__item accthealth__delight">
+            <span className="tn-micro">Donor delight</span>
+            <span className="accthealth__score">
+              <input
+                className="input tn-num"
+                type="number" min={0} max={10} step={0.5}
+                aria-label="Donor delight score out of 10"
+                value={draft.donor_delight_score ?? ''}
+                onChange={(e) => {
+                  if (edit) { edit(); return }
+                  const raw = e.currentTarget.value
+                  const n = raw === '' ? null : Math.min(10, Math.max(0, Number(raw)))
+                  setDraft((d) => ({ ...d, donor_delight_score: n }))
+                }}
+              />
+              <span className="faint tn-num">/ 10</span>
+            </span>
+          </div>
+        </div>
+      </section>
 
       <div className="acctgrid acctgrid--2">
         <WalletShareCard
@@ -129,56 +170,42 @@ export function AccountOverview({ org, ownerName }: { org: Organisation; ownerNa
         <CollectionCard years={data.years} />
       </div>
 
-      <section className="card accthealth">
-        {health.map((it) => (
-          <div key={it.key} className="accthealth__item">
-            <span className="tn-micro">{it.label}</span>
-            <RagPicker
-              value={draft[it.key]}
-              auto={it.auto}
-              onChange={(v) => (edit ? edit() : setDraft((d) => ({ ...d, [it.key]: v })))}
-            />
-          </div>
-        ))}
-        <div className="accthealth__item accthealth__delight">
-          <span className="tn-micro">Donor delight</span>
-          <span className="accthealth__score">
-            <input
-              className="input tn-num"
-              type="number" min={0} max={10} step={0.5}
-              aria-label="Donor delight score out of 10"
-              value={draft.donor_delight_score ?? ''}
-              onChange={(e) => {
-                if (edit) { edit(); return }
-                const raw = e.currentTarget.value
-                const n = raw === '' ? null : Math.min(10, Math.max(0, Number(raw)))
-                setDraft((d) => ({ ...d, donor_delight_score: n }))
-              }}
-            />
-            <span className="faint tn-num">/ 10</span>
-          </span>
-        </div>
-      </section>
-
-      <div className="acctgrid acctgrid--3">
-        <section className="card stack">
+      <div className="acctgrid acctgrid--4">
+        <section className="card acctcard acctcard--square">
           <div className="tn-micro">Relationship</div>
-          <dl className="acctfacts">
-            <dt>Partner since</dt>
-            <dd className="tn-num">{monthYear(h.partnerSince) ?? '—'}</dd>
-          </dl>
-          <PlanInput label="Reporting cadence" value={text('reporting_cadence', auto.reportingCadence)} onChange={(v) => setText('reporting_cadence', v)} onBlocked={edit} />
-          <PlanInput label="Call cadence" value={text('call_cadence')} onChange={(v) => setText('call_cadence', v)} onBlocked={edit} />
-          <PeopleList role="decision_maker" label="Decision makers" contacts={data.contacts} onChange={patchContact} />
-          <PeopleList role="influencer" label="Influencers" contacts={data.contacts} onChange={patchContact} />
+          <div className="kvlist kvlist--stack">
+            <Kv label="Partner since">
+              <input
+                className="kv__input tn-num"
+                // Empty, it reads "Add" like the other fields; the month picker appears on focus.
+                type={draft.partner_since ?? h.partnerSince ? 'month' : 'text'}
+                placeholder="Add"
+                onFocus={(e) => { e.currentTarget.type = 'month' }}
+                onBlur={(e) => { if (!e.currentTarget.value) e.currentTarget.type = 'text' }}
+                aria-label="Partner since"
+                value={draft.partner_since ?? h.partnerSince?.slice(0, 7) ?? ''}
+                onChange={(e) => {
+                  if (edit) { edit(); return }
+                  const v = e.currentTarget.value
+                  setDraft((d) => ({ ...d, partner_since: v || null }))
+                }}
+              />
+            </Kv>
+            <div className="kvpair">
+              <PlanInput label="Reporting" value={text('reporting_cadence', auto.reportingCadence)} onChange={(v) => setText('reporting_cadence', v)} onBlocked={edit} />
+              <PlanInput label="Calls" value={text('call_cadence')} onChange={(v) => setText('call_cadence', v)} onBlocked={edit} />
+            </div>
+            <PeopleList role="decision_maker" label="Decision makers" organisationId={org.id} contacts={data.contacts} onChange={patchContact} />
+            <PeopleList role="influencer" label="Influencers" organisationId={org.id} contacts={data.contacts} onChange={patchContact} />
+          </div>
         </section>
 
-        <section className="card stack acctnotescard">
+        <section className="card acctcard acctcard--square">
           <div className="tn-micro">Next steps</div>
           <div className="acctnotes" onFocusCapture={edit ? () => edit() : undefined}>
             <DictationTextarea
               label="Next steps"
-              rows={8}
+              rows={9}
               mentions
               value={text('next_steps')}
               onChange={(v) => setText('next_steps', v)}
@@ -186,34 +213,41 @@ export function AccountOverview({ org, ownerName }: { org: Organisation; ownerNa
           </div>
         </section>
 
-        <div className="stack">
-          <section className="card stack">
-            <div className="tn-micro">Partner overview</div>
-            <PlanInput label="Other NGOs they fund" value={text('top_partners')} onChange={(v) => setText('top_partners', v)} onBlocked={edit} />
+        <section className="card acctcard acctcard--square">
+          <div className="tn-micro">Partner overview</div>
+          <div className="kvlist kvlist--stack">
+            <PlanInput label="Other NGOs funded" multiline value={text('top_partners')} onChange={(v) => setText('top_partners', v)} onBlocked={edit} />
             <PlanInput label="Renewal cycle" value={text('renewal_cycle', auto.renewalCycle)} onChange={(v) => setText('renewal_cycle', v)} onBlocked={edit} />
             <PlanInput label="Board meeting" value={text('board_meeting')} onChange={(v) => setText('board_meeting', v)} onBlocked={edit} />
-          </section>
-          <section className="card stack">
-            <div className="tn-micro">Aspiration</div>
-            <label className="field">
-              <span className="field__label">Target (₹ Cr)</span>
-              <input
-                className="input tn-num"
-                inputMode="decimal"
-                value={draft.aspiration_target_inr == null ? '' : String(draft.aspiration_target_inr / 1e7)}
-                onChange={(e) => {
-                  if (edit) { edit(); return }
-                  const raw = e.currentTarget.value.trim()
-                  const cr = raw === '' ? null : Number(raw)
-                  if (cr != null && !Number.isFinite(cr)) return
-                  setDraft((d) => ({ ...d, aspiration_target_inr: cr == null ? null : Math.round(cr * 1e7) }))
-                }}
-              />
-            </label>
+          </div>
+        </section>
+
+        <section className="card acctcard acctcard--square">
+          <div className="tn-micro">Aspiration</div>
+          <div className="kvlist kvlist--stack">
+            <Kv label="Target">
+              <span className="kv__money">
+                <input
+                  className="kv__input tn-num"
+                  inputMode="decimal"
+                  placeholder="Add"
+                  aria-label="Aspiration target in crore"
+                  value={draft.aspiration_target_inr == null ? '' : String(draft.aspiration_target_inr / 1e7)}
+                  onChange={(e) => {
+                    if (edit) { edit(); return }
+                    const raw = e.currentTarget.value.trim()
+                    const cr = raw === '' ? null : Number(raw)
+                    if (cr != null && !Number.isFinite(cr)) return
+                    setDraft((d) => ({ ...d, aspiration_target_inr: cr == null ? null : Math.round(cr * 1e7) }))
+                  }}
+                />
+                <span className="faint">Cr</span>
+              </span>
+            </Kv>
             <PlanInput label="Programs" value={text('aspiration_programs')} onChange={(v) => setText('aspiration_programs', v)} onBlocked={edit} />
             <PlanInput label="Notes" multiline value={text('aspiration_notes')} onChange={(v) => setText('aspiration_notes', v)} onBlocked={edit} />
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
 
       <section className="card">
@@ -244,6 +278,16 @@ function StripItem({ label, value, num }: { label: string; value: string | null;
   )
 }
 
+/** One label/value line. Values read as text and turn into a field on hover or focus. */
+function Kv({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="kv">
+      <span className="kv__label">{label}</span>
+      <div className="kv__value">{children}</div>
+    </div>
+  )
+}
+
 function PlanInput({
   label, value, onChange, onBlocked, multiline,
 }: {
@@ -255,16 +299,17 @@ function PlanInput({
 }) {
   const props = {
     value,
+    placeholder: 'Add',
+    'aria-label': label,
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       if (onBlocked) { onBlocked(); return }
       onChange(e.currentTarget.value)
     },
   }
   return (
-    <label className="field">
-      <span className="field__label">{label}</span>
-      {multiline ? <textarea className="textarea" rows={3} {...props} /> : <input className="input" {...props} />}
-    </label>
+    <Kv label={label}>
+      {multiline ? <textarea className="kv__input kv__input--multi" rows={2} {...props} /> : <input className="kv__input" {...props} />}
+    </Kv>
   )
 }
 
@@ -293,16 +338,35 @@ function RagPicker({ value, auto, onChange }: { value: Rag | null; auto: Rag | n
   )
 }
 
+/** One dot that steps through the ratings on click: green, amber, red, none. */
+function RagCycle({ value, name, onChange }: { value: Rag | null; name: string; onChange: (v: Rag | null) => void }) {
+  const next: Rag | null = value === null ? 'green' : value === 'green' ? 'amber' : value === 'amber' ? 'red' : null
+  return (
+    <button
+      type="button"
+      className="ragpick__dot ragcycle"
+      data-rag={value ?? undefined}
+      data-on={value ? true : undefined}
+      aria-label={`${name}: ${value ?? 'not rated'}. Change rating`}
+      title={value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Not rated'}
+      onClick={() => onChange(next)}
+    />
+  )
+}
+
 function PeopleList({
-  role, label, contacts, onChange,
+  role, label, organisationId, contacts, onChange,
 }: {
   role: 'decision_maker' | 'influencer'
   label: string
+  organisationId: string
   contacts: PlanContact[]
   onChange: (c: PlanContact) => void
 }) {
   const toast = useToast()
   const access = useAccess()
+  // Set to a name to open the add-contact form; null when closed.
+  const [newName, setNewName] = useState<string | null>(null)
   const listed = contacts.filter((c) => c.influence_role === role)
   const free = contacts
     .filter((c) => !c.influence_role)
@@ -320,17 +384,16 @@ function PeopleList({
   }
 
   return (
-    <div className="field">
-      <span className="field__label">{label}</span>
+    <Kv label={label}>
       {listed.length ? (
         <ul className="acctpeople">
           {listed.map((c) => (
             <li key={c.id}>
-              <span className="acctpeople__name">
+              <span className="acctpeople__name" title={c.designation ?? undefined}>
                 {c.full_name}
                 {c.designation ? <span className="faint"> · {c.designation}</span> : null}
               </span>
-              <RagPicker value={c.relationship_rag} auto={null} onChange={(v) => void update(c, { relationship_rag: v })} />
+              <RagCycle value={c.relationship_rag} name={c.full_name} onChange={(v) => void update(c, { relationship_rag: v })} />
               <button type="button" className="acctpeople__x" aria-label={`Remove ${c.full_name}`}
                 onClick={() => void update(c, { influence_role: null })}>
                 <X size={13} />
@@ -339,22 +402,21 @@ function PeopleList({
           ))}
         </ul>
       ) : null}
-      {free.length ? (
-        <select
-          className="select"
-          value=""
-          aria-label={`Add to ${label.toLowerCase()}`}
-          onChange={(e) => {
-            const c = free.find((x) => x.id === e.currentTarget.value)
-            if (c) void update(c, { influence_role: role })
-          }}
-        >
-          <option value="">Add a contact…</option>
-          {free.map((c) => (
-            <option key={c.id} value={c.id}>{c.full_name}{c.designation ? ` — ${c.designation}` : ''}</option>
-          ))}
-        </select>
-      ) : listed.length ? null : <span className="faint" style={{ fontSize: 'var(--text-sm)' }}>No contacts yet</span>}
-    </div>
+      <ContactSearch
+        label={label}
+        contacts={free}
+        onPick={(c) => void update(c, { influence_role: role })}
+        onCreate={(name) => setNewName(name)}
+      />
+      <ContactForm
+        open={newName !== null}
+        contact={null}
+        lockedOrganisationId={organisationId}
+        prefill={newName ? { full_name: newName } : null}
+        onClose={() => setNewName(null)}
+        // A new contact joins this list as soon as it is saved.
+        onSaved={(c: Contact) => void update({ id: c.id } as PlanContact, { influence_role: role })}
+      />
+    </Kv>
   )
 }
