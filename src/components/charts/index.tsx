@@ -1,5 +1,5 @@
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { EmptyState, Skeleton } from '../ui'
 import { formatMoney } from '../../lib/format'
@@ -36,7 +36,8 @@ const AXIS = {
 /** Money on an axis has to stay short, so crore/lakh with no decimals. */
 function axisMoney(v: number): string {
   const abs = Math.abs(v)
-  if (abs >= 1e7) return `${Math.round(v / 1e7)}Cr`
+  // One decimal under 10 Cr, or a 0.75 Cr step prints "1Cr, 2Cr, 2Cr".
+  if (abs >= 1e7) return `${abs < 1e8 ? Number((v / 1e7).toFixed(1)) : Math.round(v / 1e7)}Cr`
   if (abs >= 1e5) return `${Math.round(v / 1e5)}L`
   if (abs === 0) return '0'
   return String(Math.round(v))
@@ -392,6 +393,64 @@ export function GroupedVBar({
           <Bar key={s.key} dataKey={s.key} fill={s.color} radius={[2, 2, 0, 0]} maxBarSize={22} />
         ))}
       </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+function BarsLineTooltip({ active, payload, label, series, line }: {
+  active?: boolean
+  payload?: Array<{ value: number | null; dataKey: string }>
+  label?: string
+  series: Series[]
+  line: Series
+}) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="charttip">
+      <div className="charttip__label">{label}</div>
+      {payload.map((p) => (
+        <div key={p.dataKey} className="charttip__value tn-num">
+          {p.dataKey === line.key
+            ? (p.value == null ? '—' : `${p.value}%`)
+            : formatMoney(p.value)}{' '}
+          <span className="faint">{(p.dataKey === line.key ? line : series.find((s) => s.key === p.dataKey))?.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Money columns per period with a percentage line on its own right-hand
+ * axis — wallet share over CSR budget vs collections, or cumulative
+ * collection over due vs received.
+ */
+export function BarsWithLine({
+  data, series, line,
+}: {
+  data: Array<Record<string, string | number | null>>
+  series: Series[]
+  line: Series
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }} barGap={2}>
+        <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="2 4" />
+        <XAxis dataKey="label" {...AXIS} axisLine={{ stroke: 'var(--border)' }} interval={0} />
+        <YAxis yAxisId="money" {...AXIS} axisLine={false} tickFormatter={axisMoney} width={40} />
+        <YAxis yAxisId="pct" orientation="right" {...AXIS} axisLine={false} width={36}
+          tickFormatter={(v: number) => `${v}%`} />
+        <Tooltip cursor={{ fill: 'var(--surface-sunken)' }} content={<BarsLineTooltip series={series} line={line} />} />
+        <Legend
+          wrapperStyle={{ fontSize: 11, fontFamily: 'var(--font-sans)' }}
+          formatter={(v: string) => (v === line.key ? line.label : series.find((s) => s.key === v)?.label ?? v)}
+        />
+        {series.map((s) => (
+          <Bar key={s.key} yAxisId="money" dataKey={s.key} fill={s.color} radius={[2, 2, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+        ))}
+        <Line yAxisId="pct" dataKey={line.key} stroke={line.color} strokeWidth={2}
+          dot={{ r: 3, fill: line.color, strokeWidth: 0 }} connectNulls type="linear" isAnimationActive={false} />
+      </ComposedChart>
     </ResponsiveContainer>
   )
 }

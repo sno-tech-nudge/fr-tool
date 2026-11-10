@@ -3,12 +3,13 @@ import { Link, createFileRoute, useNavigate, useRouterState } from '@tanstack/re
 import { ArrowLeft, ExternalLink, Pencil, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
-  Badge, Button, DetailList, EmptyState, Skeleton, TableSkeleton,
+  Badge, Button, EmptyState, Skeleton, TableSkeleton,
 } from '../components/ui'
 import { OrganisationForm, type Organisation } from '../components/organisations/OrganisationForm'
 import { ContactForm, type Contact } from '../components/contacts/ContactForm'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { OrgNewsTab } from '../components/organisations/OrgNewsTab'
+import { AccountOverview } from '../components/organisations/AccountOverview'
 import {
   CAPITAL_CATEGORIES, DONOR_TYPES, GRANT_STATUSES, RELATIONSHIP_STATUSES, SENIORITIES,
   grantStatusTone, labelOf, relationshipTone,
@@ -173,20 +174,20 @@ function OrganisationDetail() {
           </Button>
         </div>
 
-        <div className="kpirow">
-          <div className="kpi">
+        <div className="kpirow kpirow--compact">
+          <div className="kpi kpi--compact">
             <div className="kpi__label">Open pipeline</div>
             <div className="kpi__value tn-num">
               {summary ? formatMoney(summary.openPipeline) : <Skeleton height={20} width={90} />}
             </div>
           </div>
-          <div className="kpi">
+          <div className="kpi kpi--compact">
             <div className="kpi__label">Secured</div>
             <div className="kpi__value tn-num">
               {summary ? formatMoney(summary.secured) : <Skeleton height={20} width={90} />}
             </div>
           </div>
-          <div className="kpi">
+          <div className="kpi kpi--compact">
             <div className="kpi__label">Contacts</div>
             <div className="kpi__value tn-num">
               {summary ? summary.contacts : <Skeleton height={20} width={40} />}
@@ -208,34 +209,7 @@ function OrganisationDetail() {
         ))}
       </nav>
 
-      {tab === 'overview' ? (
-        <div className="card">
-          <DetailList
-            items={[
-              { label: 'Donor type', value: labelOf(DONOR_TYPES, org.donor_type) },
-              { label: 'Sector', value: org.segment },
-              { label: 'Relationship owner', value: ownerName },
-              {
-                label: 'Location',
-                value: [org.geography_city, org.geography_state, org.geography_country]
-                  .filter(Boolean).join(', ') || null,
-              },
-              {
-                label: 'Annual CSR budget',
-                value: org.csr_budget_annual_inr
-                  ? <span className="tn-num">{formatMoney(org.csr_budget_annual_inr)}</span>
-                  : null,
-              },
-              {
-                label: 'CSR focus areas',
-                value: org.csr_focus_areas?.length ? org.csr_focus_areas.join(', ') : null,
-              },
-              { label: 'Description', value: org.description },
-              { label: 'Notes', value: org.notes },
-            ]}
-          />
-        </div>
-      ) : null}
+      {tab === 'overview' ? <AccountOverview key={org.id} org={org} ownerName={ownerName} /> : null}
 
       {tab === 'contacts' ? <OrgContacts organisationId={org.id} orgName={org.name} /> : null}
       {tab === 'opportunities' ? <OrgOpportunities organisationId={org.id} /> : null}

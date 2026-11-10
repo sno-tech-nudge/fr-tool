@@ -41,6 +41,8 @@
   height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
+  /* Still scrolls on a short window, but never draws a scroll bar on the nav. */
+  scrollbar-width: none;
   flex: 0 0 var(--sidebar-w);
   width: var(--sidebar-w);
   transition: flex-basis var(--duration-slow) var(--ease-standard),
@@ -92,7 +94,11 @@
 /* Only the text/logo fades in the rail — icons stay put and just re-centre.
    Fast, flat opacity both ways: the rail is still wide enough (60px) that
    there's no wrap-then-unwrap risk the way a close-to-0 collapse would have. */
+/* No wrapping while the width animates: text that re-wraps as the rail narrows
+   makes the content taller for a few frames, and the sidebar flashes a scroll
+   bar. Kept on one line, it is simply clipped by the sidebar edge. */
 .sidebar__brand img, .navlink span, .sidebar__section, .sidebar__user {
+  white-space: nowrap;
   opacity: 1;
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
@@ -108,6 +114,7 @@
 .app[data-sidebar='collapsed'] .sidebar__brand img,
 .app[data-sidebar='collapsed'] .navlink span { display: none; }
 
+.sidebar::-webkit-scrollbar { display: none; }
 .sidebar__nav { display: flex; flex-direction: column; gap: 1px; }
 
 .sidebar__section {
@@ -1618,7 +1625,11 @@ button.celllink:hover { text-decoration: underline; }
 .main { position: relative; }
 .bellslot { position: absolute; top: var(--space-6); right: var(--space-6); z-index: 30; }
 .page > .page__head:first-child,
-.page > .backlink:first-child + .page__head { padding-right: calc(36px + var(--space-4)); }
+.page > .backlink:first-child + .page__head,
+.page > .backlink:first-child + .rechead .rechead__top { padding-right: calc(36px + var(--space-4)); }
+/* Record pages open with a back link, so the bell rises to that line and
+   clears the Edit button below it. */
+.main:has(> .page > .backlink:first-child + .rechead) > .bellslot { top: var(--space-5); }
 
 .bell { position: relative; }
 .bell__button {
@@ -1712,3 +1723,81 @@ button.celllink:hover { text-decoration: underline; }
   overflow: hidden;
 }
 .bell__when { font-size: var(--text-2xs); color: var(--text-faint); }
+
+/* ---------- organisation account plan (Overview tab) ---------- */
+.acctstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-md);
+}
+.acctstrip__item { min-width: 0; flex: 0 1 auto; }
+.acctstrip__item dd { margin: 2px 0 0; font-size: var(--text-sm); color: var(--text); font-weight: var(--weight-regular); overflow-wrap: anywhere; }
+.acctstrip__item dd[data-empty] { color: var(--text-faint); }
+
+.acctgrid { display: grid; gap: var(--space-4); align-items: start; }
+.acctgrid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.acctgrid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+/* The notes box fills its column, so the row ends level. */
+.acctnotescard, .acctnotes, .acctnotes .field, .acctnotes .dictate { display: flex; flex-direction: column; flex: 1 1 auto; }
+.acctnotes .textarea { flex: 1 1 auto; resize: none; }
+.acctnotes .field__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 1000px) { .acctgrid--3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .acctgrid--2, .acctgrid--3 { grid-template-columns: 1fr; } }
+
+.acctchart { position: relative; display: flex; flex-direction: column; gap: var(--space-3); }
+.acctchart__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: 28px; }
+.acctchart__body { height: 210px; }
+/* Missing data: the chart stays as a faded backdrop behind the question. */
+.acctchart__body[data-ghost] { opacity: 0.14; filter: grayscale(1); pointer-events: none; }
+.acctchart__ask {
+  position: absolute;
+  inset: calc(28px + var(--space-5) + var(--space-3)) var(--space-5) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.acctchart__asktitle { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text); }
+.acctchart__budgets { border-top: var(--border-width) solid var(--border); padding-top: var(--space-3); }
+.acctchart__inputs { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.acctchart__input { display: flex; flex-direction: column; gap: 2px; }
+.acctchart__input .input { width: 76px; padding-inline: var(--space-2); background: var(--surface); }
+
+.accthealth { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4); padding-block: var(--space-4); }
+.accthealth__item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+@media (max-width: 760px) { .accthealth { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.accthealth__score { display: inline-flex; align-items: center; gap: var(--space-2); }
+.accthealth__score .input { width: 64px; padding-inline: var(--space-2); }
+
+.ragpick { display: inline-flex; gap: 6px; }
+.ragpick__dot {
+  width: 16px; height: 16px; padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--_c);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.45;
+}
+.ragpick__dot[data-rag='green'] { --_c: var(--rag-green); }
+.ragpick__dot[data-rag='amber'] { --_c: var(--rag-amber); }
+.ragpick__dot[data-rag='red'] { --_c: var(--rag-red); }
+.ragpick__dot:hover { opacity: 0.9; }
+.ragpick__dot[data-on] { background: var(--_c); opacity: 1; }
+.ragpick__dot[data-auto] { opacity: 0.55; }
+.ragpick__dot:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+
+.acctfacts { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-4); margin: 0; font-size: var(--text-sm); }
+.acctfacts dt { color: var(--text-muted); }
+.acctfacts dd { margin: 0; color: var(--text); }
+
+.acctpeople { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.acctpeople li { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); }
+.acctpeople__name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acctpeople__x { display: grid; place-items: center; padding: 2px; border: 0; background: none; color: var(--text-faint); cursor: pointer; border-radius: var(--radius-sm); }
+.acctpeople__x:hover { color: var(--text); background: var(--surface-sunken); }
