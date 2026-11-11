@@ -33,8 +33,14 @@ export type Tranche = {
 
 const SELECT_COLS = '*, fr_remittances(*)'
 
+/** Received means confirmed by finance. */
 function receivedOf(t: Tranche): number {
-  return (t.fr_remittances ?? []).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
+  return (t.fr_remittances ?? []).filter((r) => r.confirmed_by_finance).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
+}
+
+/** Recorded by the team, not yet checked against the bank. */
+function awaitingOf(t: Tranche): number {
+  return (t.fr_remittances ?? []).filter((r) => !r.confirmed_by_finance).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100
@@ -83,6 +89,8 @@ export function TranchesTab({
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<Tranche | null>(null)
   const [receiving, setReceiving] = useState<Tranche | null>(null)
+  // Opened from "Edit receipt": go straight to correcting it.
+  const [editOnOpen, setEditOnOpen] = useState(false)
 
   const load = useCallback(async () => {
     setRows(null)
@@ -138,6 +146,7 @@ export function TranchesTab({
 
   const scheduled = (rows ?? []).reduce((s, t) => s + Number(t.amount_inr_expected ?? t.amount ?? 0), 0)
   const received = (rows ?? []).reduce((s, t) => s + receivedOf(t), 0)
+  const awaitingTotal = (rows ?? []).reduce((s, t) => s + awaitingOf(t), 0)
   const unscheduled = committedInr - scheduled
 
   return (
@@ -191,6 +200,12 @@ export function TranchesTab({
                 {rows.map((t) => {
                   const got = receivedOf(t)
                   const late = isTrancheOverdue(t.status, t.due_date)
+                  // Paid in full but not yet checked against the bank by finance.
+                  const pending = awaitingOf(t)
+                  // Money recorded against it that finance has not confirmed yet.
+                  const unverified = pending > 0 && t.status !== 'received'
+                  // Recorded money already covers it: the next step is correcting, not adding.
+                  const covered = got + pending >= Number(t.amount_inr_expected ?? t.amount ?? 0)
                   const days = daysUntil(t.due_date)
                   return (
                     <tr key={t.id} className="is-clickable" onClick={() => setEditing(t)}>
@@ -204,17 +219,26 @@ export function TranchesTab({
                         ) : null}
                       </td>
                       <td className="tn-num">{formatMoney(t.amount_inr_expected ?? t.amount)}</td>
-                      <td className="tn-num">{got ? formatMoney(got) : <span className="faint">—</span>}</td>
+                      <td className="tn-num">
+                        {got ? formatMoney(got) : <span className="faint">—</span>}
+                        {pending ? <div className="faint" style={{ fontSize: 'var(--text-xs)' }}>+{formatMoney(pending)} awaiting</div> : null}
+                      </td>
                       <td>
-                        <Badge tone={late ? 'red' : trancheTone(t.status)}>
-                          {late && t.status !== 'delayed' ? 'Overdue' : labelOf(TRANCHE_STATUSES, t.status)}
-                        </Badge>
+                        {unverified ? (
+                          <Badge tone="amber">Awaiting finance</Badge>
+                        ) : (
+                          <Badge tone={late ? 'red' : trancheTone(t.status)}>
+                            {late && t.status !== 'delayed' ? 'Overdue' : labelOf(TRANCHE_STATUSES, t.status)}
+                          </Badge>
+                        )}
                       </td>
                       <td className="muted">{t.condition_note ?? '—'}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="row" style={{ gap: 'var(--space-2)' }}>
-                          <Button size="sm" variant="secondary" onClick={() => setReceiving(t)}>
-                            {canEnter ? 'Record receipt' : 'Receipts'}
+                          <Button size="sm" variant="secondary" onClick={() => { setEditOnOpen(unverified && covered); setReceiving(t) }}>
+                            {!canEnter || (t.status === 'received' && !pending)
+                              ? 'Receipts'
+                              : unverified && covered ? 'Edit receipt' : 'Record receipt'}
                           </Button>
                           <Button
                             size="sm"
@@ -235,6 +259,7 @@ export function TranchesTab({
           <div className="card row" style={{ justifyContent: 'space-between' }}>
             <span className="tn-num">
               {formatMoney(scheduled)} scheduled · {formatMoney(received)} received
+              {awaitingTotal ? <> · {formatMoney(awaitingTotal)} awaiting finance</> : null}
             </span>
             <span
               className="tn-num"
@@ -266,6 +291,7 @@ export function TranchesTab({
         tranche={receiving}
         grantIsFcra={grantIsFcra}
         defaultBankAccountId={defaultBankAccountId}
+        editOnOpen={editOnOpen}
         onClose={() => setReceiving(null)}
         onSaved={() => { void load(); onChanged() }}
       />

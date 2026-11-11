@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Lock, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
@@ -8,7 +8,7 @@ import { RECEIPT_TYPES, labelOf } from '../../lib/enums'
 import { formatDate, formatMoney, toISODate } from '../../lib/format'
 import { rateToInrOn } from '../../lib/fx'
 import { useAccess } from '../../lib/accessContext'
-import { confirmReceipt, syncTrancheStatus, usePaymentAccess } from '../../lib/payments'
+import { confirmReceipt, usePaymentAccess } from '../../lib/payments'
 import { useBankAccounts, accountsFor } from '../../hooks/useBankAccounts'
 
 export type Remittance = {
@@ -47,12 +47,14 @@ type TrancheLite = {
  * Removing a receipt is a soft delete — it leaves every total but stays on file.
  */
 export function RemittanceDrawer({
-  open, tranche, grantIsFcra, defaultBankAccountId, onClose, onSaved,
+  open, tranche, grantIsFcra, defaultBankAccountId, editOnOpen = false, onClose, onSaved,
 }: {
   open: boolean
   tranche: TrancheLite | null
   grantIsFcra: boolean
   defaultBankAccountId: string | null
+  /** Open straight into correcting the receipt, when there is exactly one unconfirmed. */
+  editOnOpen?: boolean
   onClose: () => void
   onSaved: () => void
 }) {
@@ -122,6 +124,21 @@ export function RemittanceDrawer({
     return () => { active = false }
   }, [open, date, currency, rateTouched])
 
+  // Opened from "Edit receipt": once this instalment's receipts are in, go
+  // straight to correcting the one unconfirmed receipt. Several → the list.
+  const autoEdited = useRef(false)
+  useEffect(() => { if (open) autoEdited.current = false }, [open])
+  useEffect(() => {
+    if (!open || !editOnOpen || !canEnter || autoEdited.current || !rows || !tranche) return
+    // The list can still hold the previous instalment's receipts for a moment.
+    if (rows.some((r) => r.tranche_id !== tranche.id)) return
+    autoEdited.current = true
+    const unlocked = rows.filter((r) => !r.is_locked)
+    if (unlocked.length === 1) startEdit(unlocked[0])
+    // startEdit only sets form state; leaving it out keeps this to one run per open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editOnOpen, canEnter, rows, tranche])
+
   function startEdit(r: Remittance) {
     setEditing(r)
     setDate(r.received_date ?? '')
@@ -134,12 +151,10 @@ export function RemittanceDrawer({
     setWarnedRef(null)
   }
 
-  async function settle(next: Remittance[]) {
+  // The instalment's status follows confirmed money, and the database moves
+  // it when a receipt is confirmed — recording or correcting one changes nothing.
+  function settle(next: Remittance[]) {
     setRows(next)
-    if (tranche) {
-      const total = next.reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
-      await syncTrancheStatus(tranche, total, access.employeeId)
-    }
     onSaved()
   }
 
@@ -199,7 +214,7 @@ export function RemittanceDrawer({
       : [...(rows ?? []), saved]
     toast.success(editing ? 'Receipt updated.' : 'Receipt recorded.')
     startNew()
-    await settle(next)
+    settle(next)
   }
 
   async function remove(r: Remittance) {
@@ -213,7 +228,7 @@ export function RemittanceDrawer({
     if (error) { toast.error(error.message); return }
     if (editing?.id === r.id) startNew()
     toast.success('Receipt removed.')
-    await settle((rows ?? []).filter((x) => x.id !== r.id))
+    settle((rows ?? []).filter((x) => x.id !== r.id))
   }
 
   async function confirmAndLock(r: Remittance) {
@@ -226,7 +241,9 @@ export function RemittanceDrawer({
     onSaved()
   }
 
-  const received = (rows ?? []).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
+  // Received is confirmed money; recorded-but-unconfirmed is shown apart.
+  const received = (rows ?? []).filter((r) => r.confirmed_by_finance).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
+  const awaiting = (rows ?? []).filter((r) => !r.confirmed_by_finance).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
   const expected = Number(tranche?.amount_inr_expected ?? tranche?.amount ?? 0)
 
   return (
@@ -312,7 +329,9 @@ export function RemittanceDrawer({
         ) : null}
 
         <div className="tn-micro">
-          {rows === null ? 'Receipts' : `${formatMoney(received)} of ${formatMoney(expected)} received`}
+          {rows === null
+            ? 'Receipts'
+            : `${formatMoney(received)} of ${formatMoney(expected)} received${awaiting ? ` · ${formatMoney(awaiting)} awaiting finance` : ''}`}
         </div>
 
         {rows === null ? (

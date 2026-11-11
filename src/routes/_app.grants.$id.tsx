@@ -110,7 +110,7 @@ function GrantDetail() {
     const [{ data: tranches }, { data: milestones }] = await Promise.all([
       supabase
         .from('fr_tranches')
-        .select('id, due_date, status, fr_remittances(amount_inr)')
+        .select('id, due_date, status, fr_remittances(amount_inr, confirmed_by_finance)')
         .is('fr_remittances.deleted_at', null)
         .eq('grant_id', id),
       supabase
@@ -123,10 +123,11 @@ function GrantDetail() {
     const rows = (tranches ?? []) as Array<{
       due_date: string
       status: string
-      fr_remittances: Array<{ amount_inr: number }>
+      fr_remittances: Array<{ amount_inr: number; confirmed_by_finance: boolean }>
     }>
+    // Received means confirmed by finance.
     const received = rows.reduce(
-      (sum, t) => sum + (t.fr_remittances ?? []).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0),
+      (sum, t) => sum + (t.fr_remittances ?? []).filter((r) => r.confirmed_by_finance).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0),
       0,
     )
     setMoney({

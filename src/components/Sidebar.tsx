@@ -4,6 +4,7 @@ import {
   Settings, Sparkles, UserPlus, Wallet,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+import { FeedbackButton } from './FeedbackButton'
 import type { FrAccess } from '../hooks/useFrAccess'
 
 type NavItem = {
@@ -105,11 +106,13 @@ export function Sidebar({
           {access.erpRole}
           {access.frSubRole ? ` · fr ${access.frSubRole}` : ''}
         </div>
+        {/* Testing period only — remove this line, or set VITE_FEEDBACK_BUTTON=off, to retire it. */}
+        <FeedbackButton />
         <button
           className="navlink"
           onClick={() => void signOut()}
           title="Sign out"
-          style={{ border: 0, background: 'none', cursor: 'pointer', textAlign: 'left' }}
+          style={{ border: 0, background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
         >
           <LogOut size={16} />
           <span>Sign out</span>

@@ -159,9 +159,11 @@ export function useAccountData(organisationId: string) {
       supabase.from('v_fr_tranche_facts')
         .select('amount_inr_expected, received_inr, due_fiscal_year, is_overdue, effective_due_date, status')
         .eq('organisation_id', organisationId),
+      // Collections are confirmed money only.
       supabase.from('v_fr_remittance_facts')
         .select('amount_inr, received_fiscal_year')
-        .eq('organisation_id', organisationId),
+        .eq('organisation_id', organisationId)
+        .eq('confirmed_by_finance', true),
       supabase.from('v_fr_opportunity_facts')
         .select('geography, is_open, is_won, opportunity_type, expected_close_date')
         .eq('organisation_id', organisationId),

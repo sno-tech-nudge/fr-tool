@@ -67,26 +67,3 @@ export async function confirmReceipt(id: string, employeeId: string | null) {
     .select()
     .single()
 }
-
-/**
- * Keeps an instalment's status in step with what has come in against it:
- * fully covered → received; no longer covered after a correction → pending.
- * Delayed and cancelled are someone's call, so they are left alone.
- */
-export async function syncTrancheStatus(
-  tranche: { id: string; status?: string | null; amount: number; amount_inr_expected: number | null },
-  receivedInr: number,
-  employeeId: string | null,
-) {
-  const expected = Number(tranche.amount_inr_expected ?? tranche.amount ?? 0)
-  if (expected <= 0) return
-  const covered = receivedInr >= expected
-  // The status on screen can be stale after an earlier change; read it fresh.
-  const { data } = await supabase.from('fr_tranches').select('status').eq('id', tranche.id).maybeSingle()
-  const status = (data as { status: string } | null)?.status ?? tranche.status ?? null
-  if (covered && status !== 'received') {
-    await supabase.from('fr_tranches').update({ status: 'received', updated_by: employeeId }).eq('id', tranche.id)
-  } else if (!covered && status === 'received') {
-    await supabase.from('fr_tranches').update({ status: 'pending', updated_by: employeeId }).eq('id', tranche.id)
-  }
-}

@@ -467,7 +467,7 @@ type OrgGrant = {
   end_date: string
   status: string
   owner_user_id: string
-  fr_tranches: Array<{ fr_remittances: Array<{ amount_inr: number }> }>
+  fr_tranches: Array<{ fr_remittances: Array<{ amount_inr: number; confirmed_by_finance: boolean }> }>
 }
 
 function OrgGrants({ organisationId }: { organisationId: string }) {
@@ -482,7 +482,7 @@ function OrgGrants({ organisationId }: { organisationId: string }) {
     const { data, error: err } = await supabase
       .from('fr_grants')
       .select('id, agreement_number, total_value_inr, is_fcra, start_date, end_date, status, '
-        + 'owner_user_id, fr_tranches(fr_remittances(amount_inr))')
+        + 'owner_user_id, fr_tranches(fr_remittances(amount_inr, confirmed_by_finance))')
       .is('fr_tranches.fr_remittances.deleted_at', null)
       .eq('organisation_id', organisationId)
       .is('deleted_at', null)
@@ -527,6 +527,7 @@ function OrgGrants({ organisationId }: { organisationId: string }) {
           {rows.map((g) => {
             const got = (g.fr_tranches ?? []).reduce(
               (sum, t) => sum + (t.fr_remittances ?? [])
+                .filter((r) => r.confirmed_by_finance)
                 .reduce((s, r) => s + Number(r.amount_inr ?? 0), 0),
               0,
             )

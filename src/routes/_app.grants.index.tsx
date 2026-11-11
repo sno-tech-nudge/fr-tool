@@ -36,7 +36,7 @@ const DEFAULTS = {
 const SELECT_COLS =
   'id, agreement_number, capital_category, total_value_inr, currency, is_fcra, ' +
   'signed_date, start_date, end_date, status, owner_user_id, is_confidential, ' +
-  'fr_organisations(id, name), fr_tranches(id, due_date, status, fr_remittances(amount_inr)), ' +
+  'fr_organisations(id, name), fr_tranches(id, due_date, status, fr_remittances(amount_inr, confirmed_by_finance)), ' +
   'fr_compliance_milestones(due_date, status)'
 
 type GrantRow = {
@@ -57,14 +57,15 @@ type GrantRow = {
     id: string
     due_date: string
     status: string
-    fr_remittances: Array<{ amount_inr: number }>
+    fr_remittances: Array<{ amount_inr: number; confirmed_by_finance: boolean }>
   }>
   fr_compliance_milestones: Array<{ due_date: string; status: string }>
 }
 
+/** Received means confirmed by finance. */
 function receivedOf(g: GrantRow): number {
   return (g.fr_tranches ?? []).reduce(
-    (sum, t) => sum + (t.fr_remittances ?? []).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0),
+    (sum, t) => sum + (t.fr_remittances ?? []).filter((r) => r.confirmed_by_finance).reduce((s, r) => s + Number(r.amount_inr ?? 0), 0),
     0,
   )
 }

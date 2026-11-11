@@ -300,9 +300,12 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
       .eq('due_next_90d', true)
       .gt('outstanding_inr', 0)
 
+    // Money received means confirmed by finance; unconfirmed receipts are
+    // counted separately below.
     let bankQ = supabase.from('v_fr_remittance_facts')
       .select('label:bank_label,is_fcra:bank_is_fcra,value:amount_inr.sum()')
       .match(remittanceScope)
+      .eq('confirmed_by_finance', true)
     if (fys.length) bankQ = bankQ.in('received_fiscal_year', fys)
     if (quarters.length) bankQ = bankQ.in('received_fiscal_quarter', quarters)
 
@@ -310,6 +313,7 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
       .select('label:received_fiscal_year,value:amount_inr.sum()')
       .match(remittanceScope)
       .eq('grant_is_fcra', true)
+      .eq('confirmed_by_finance', true)
     if (fys.length) fcraFyQ = fcraFyQ.in('received_fiscal_year', fys)
     if (quarters.length) fcraFyQ = fcraFyQ.in('received_fiscal_quarter', quarters)
 

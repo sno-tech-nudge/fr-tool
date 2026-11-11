@@ -114,7 +114,9 @@ comment on view public.v_fr_opportunity_program_facts is
 drop view if exists public.v_fr_grant_facts cascade;
 create view public.v_fr_grant_facts with (security_invoker = on) as
 with received as (
-  select t.grant_id, sum(r.amount_inr) as received_inr
+  select t.grant_id,
+         sum(r.amount_inr) filter (where r.confirmed_by_finance)     as received_inr,
+         sum(r.amount_inr) filter (where not r.confirmed_by_finance) as awaiting_inr
   from public.fr_tranches t
   join public.fr_remittances r on r.tranche_id = t.id
   where r.deleted_at is null
@@ -146,7 +148,9 @@ select
   g.status,
   g.owner_user_id,
   e.name                                  as owner_name,
-  b.label                                 as bank_label
+  b.label                                 as bank_label,
+  -- Recorded but not yet confirmed by finance; not part of received_inr.
+  coalesce(rc.awaiting_inr, 0)            as awaiting_inr
 from public.fr_grants g
 left join public.fr_organisations org on org.id = g.organisation_id
 left join received rc                 on rc.grant_id = g.id
@@ -165,7 +169,9 @@ comment on view public.v_fr_grant_facts is
 drop view if exists public.v_fr_tranche_facts cascade;
 create view public.v_fr_tranche_facts with (security_invoker = on) as
 with received as (
-  select r.tranche_id, sum(r.amount_inr) as received_inr
+  select r.tranche_id,
+         sum(r.amount_inr) filter (where r.confirmed_by_finance)     as received_inr,
+         sum(r.amount_inr) filter (where not r.confirmed_by_finance) as awaiting_inr
   from public.fr_remittances r
   where r.deleted_at is null
   group by r.tranche_id
@@ -213,7 +219,8 @@ select
                                           as due_month,
   g.owner_user_id,
   g.owner_name,
-  g.status                                as grant_status
+  g.status                                as grant_status,
+  coalesce(rc.awaiting_inr, 0)            as awaiting_inr
 from public.fr_tranches t
 join public.v_fr_grant_facts g on g.id = t.grant_id
 left join received rc          on rc.tranche_id = t.id;

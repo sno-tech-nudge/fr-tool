@@ -14,13 +14,16 @@ const COPY: Record<Kind, { title: string; prompt: string }> = {
 }
 
 /**
- * A small floating button for the testing period: anyone signed in can report
+ * A "Send feedback" item in the sidebar for the testing period: anyone signed in can report
  * a bug or suggest a feature without leaving the page. It saves to fr_feedback
  * (read by super admins under Configuration → Feedback) together with who sent
  * it and which page they were on, so reports arrive with their context.
  *
+ * The panel opens beside the sidebar, fixed to the viewport, so the sidebar's
+ * own scrolling cannot clip it and it never covers the page's buttons.
+ *
  * Hide it for everyone by setting VITE_FEEDBACK_BUTTON=off at build time, or
- * remove the <FeedbackButton /> line from the app layout.
+ * remove the <FeedbackButton /> line from the sidebar.
  */
 export function FeedbackButton() {
   const toast = useToast()
@@ -32,6 +35,16 @@ export function FeedbackButton() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const box = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  // Where the panel sits: just right of the sidebar, its foot level with the button's.
+  const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null)
+
+  function openPanel() {
+    const r = trigger.current?.getBoundingClientRect()
+    const sidebar = trigger.current?.closest('.sidebar')?.getBoundingClientRect()
+    if (r) setPos({ left: (sidebar?.right ?? r.right) + 12, bottom: Math.max(12, window.innerHeight - r.bottom) })
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -80,7 +93,7 @@ export function FeedbackButton() {
   return (
     <div className="feedback" ref={box}>
       {open ? (
-        <div className="feedback__panel" role="dialog" aria-label="Send feedback">
+        <div className="feedback__panel" role="dialog" aria-label="Send feedback" style={pos ?? undefined}>
           {kind === null ? (
             <>
               <div className="feedback__head">
@@ -119,8 +132,16 @@ export function FeedbackButton() {
           )}
         </div>
       ) : null}
-      <button type="button" className="feedback__fab" onClick={() => (open ? close() : setOpen(true))} aria-expanded={open}>
-        <MessageSquarePlus size={15} /> Send feedback
+      <button
+        ref={trigger}
+        type="button"
+        className="navlink feedback__item"
+        onClick={() => (open ? close() : openPanel())}
+        aria-expanded={open}
+        title="Send feedback"
+      >
+        <MessageSquarePlus size={16} />
+        <span>Send feedback</span>
       </button>
     </div>
   )
