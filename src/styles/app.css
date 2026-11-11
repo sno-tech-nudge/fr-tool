@@ -1907,3 +1907,17 @@ button.celllink:hover { text-decoration: underline; }
 .kvlist--stack .acctpeople li { gap: var(--space-2); }
 .ragcycle { flex: 0 0 auto; }
 .ragcycle:not([data-rag]) { --_c: var(--text-faint); border-style: dashed; }
+
+/* Number fields take typed values only: no up/down arrows. */
+input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Receipts: what's ticked, and the action on it */
+.selectbar {
+  display: flex; align-items: center; gap: var(--space-4);
+  margin-bottom: var(--space-3); padding: var(--space-2) var(--space-4);
+  background: var(--surface-taupe); border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.table tr[data-active] td { background: color-mix(in srgb, var(--surface-taupe) 45%, transparent); }

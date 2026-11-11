@@ -37,6 +37,12 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    key: 'receipt_to_confirm',
+    label: 'Receipts to confirm',
+    description: 'A receipt was recorded and needs checking against the bank. Finance only.',
+    live: true,
+  },
+  {
     key: 'tranche_due',
     label: 'Instalments due',
     description: 'Money expected on a grant I own, before and after the due date.',

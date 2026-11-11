@@ -6,6 +6,8 @@ import { ActionsCard } from '../components/home/ActionsCard'
 import { CollectionsCard } from '../components/home/CollectionsCard'
 import { NewsCard } from '../components/home/NewsCard'
 import { NotificationsRail } from '../components/home/NotificationsRail'
+import { ToConfirmCard } from '../components/home/ToConfirmCard'
+import { usePaymentAccess } from '../lib/payments'
 
 export const Route = createFileRoute('/_app/')({ component: HomePage })
 
@@ -22,25 +24,33 @@ const VIEWS = [
   { key: 'day', label: 'My day' },
   { key: 'actions', label: 'Actions' },
   { key: 'collections', label: 'Remaining collections' },
+  { key: 'confirm', label: 'To confirm' },
 ] as const
 
 type View = typeof VIEWS[number]['key']
 
-function readStoredView(): View {
+function readStoredView(): View | null {
   try {
     const stored = localStorage.getItem(VIEW_KEY)
     if (VIEWS.some((v) => v.key === stored)) return stored as View
   } catch { /* storage disabled — fall through */ }
-  return 'day'
+  return null
 }
 
 function HomePage() {
   const access = useAccess()
-  const [chosen, setChosen] = useState<View>('day')
-  const showCollections = access.frFocus !== 'hunting'
-  const views = VIEWS.filter((v) => v.key !== 'collections' || showCollections)
+  const [chosen, setChosen] = useState<View | null>(null)
+  // Finance works from the receipts queue and rarely owns grants: their Home
+  // leads with it, and remaining collections (always empty for them) goes.
+  const isFinance = access.frSubRole === 'finance'
+  const { canConfirm } = usePaymentAccess()
+  const showCollections = access.frFocus !== 'hunting' && !isFinance
+  const views = (isFinance
+    ? [...VIEWS.filter((v) => v.key === 'confirm'), ...VIEWS.filter((v) => v.key !== 'confirm')]
+    : [...VIEWS]
+  ).filter((v) => (v.key !== 'collections' || showCollections) && (v.key !== 'confirm' || canConfirm))
   // A stored choice can point at a tab this person no longer has.
-  const view: View = views.some((v) => v.key === chosen) ? chosen : 'day'
+  const view: View = chosen && views.some((v) => v.key === chosen) ? chosen : views[0].key
 
   // Read after mount, so the first paint never depends on storage.
   useEffect(() => { setChosen(readStoredView()) }, [])
@@ -90,6 +100,7 @@ function HomePage() {
         ) : null}
         {view === 'actions' ? <ActionsCard /> : null}
         {view === 'collections' ? <CollectionsCard /> : null}
+        {view === 'confirm' ? <ToConfirmCard /> : null}
       </div>
     </div>
   )

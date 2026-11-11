@@ -111,6 +111,7 @@ function GrantDetail() {
       supabase
         .from('fr_tranches')
         .select('id, due_date, status, fr_remittances(amount_inr)')
+        .is('fr_remittances.deleted_at', null)
         .eq('grant_id', id),
       supabase
         .from('fr_compliance_milestones')

@@ -27,12 +27,13 @@ type Notification = {
   read_at: string | null
 }
 
-/** Only these three have a detail route worth jumping to. */
-function target(n: Notification): { to: string; id: string } | null {
+/** Where a notification leads: a record's page, or for a receipt, finance's queue. */
+function target(n: Notification): { to: string; params?: { id: string }; search?: Record<string, string> } | null {
+  if (n.category === 'receipt_to_confirm') return { to: '/grants', search: { view: 'receipts', receipt: 'awaiting' } }
   if (!n.parent_id) return null
-  if (n.parent_type === 'opportunity') return { to: '/opportunities/$id', id: n.parent_id }
-  if (n.parent_type === 'grant') return { to: '/grants/$id', id: n.parent_id }
-  if (n.parent_type === 'organisation') return { to: '/organisations/$id', id: n.parent_id }
+  if (n.parent_type === 'opportunity') return { to: '/opportunities/$id', params: { id: n.parent_id } }
+  if (n.parent_type === 'grant') return { to: '/grants/$id', params: { id: n.parent_id } }
+  if (n.parent_type === 'organisation') return { to: '/organisations/$id', params: { id: n.parent_id } }
   return null
 }
 
@@ -133,7 +134,7 @@ export function NotificationsRail() {
                   <tr key={n.id} data-unread={!n.read_at || undefined} data-read={n.read_at ? true : undefined}>
                     <td>
                       {link ? (
-                        <Link to={link.to} params={{ id: link.id }} className="celllink">{n.title}</Link>
+                        <Link to={link.to} params={link.params as never} search={link.search as never} className="celllink">{n.title}</Link>
                       ) : n.title}
                     </td>
                     <td className="muted">{n.body ?? '—'}</td>

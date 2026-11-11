@@ -6,6 +6,7 @@ import {
   Badge, Button, EmptyState, Pagination, RagBadge, SearchInput, Select, Skeleton, TableSkeleton,
 } from '../components/ui'
 import { GrantForm } from '../components/grants/GrantForm'
+import { ReceiptsRegister } from '../components/grants/ReceiptsRegister'
 import {
   CAPITAL_CATEGORIES, GRANT_STATUSES, grantStatusTone, labelOf,
 } from '../lib/enums'
@@ -75,7 +76,35 @@ function healthOf(g: GrantRow): 'green' | 'amber' | 'red' {
   ])
 }
 
+/**
+ * Two views of the money side: grants, and every receipt against them (for
+ * finance's reconciliation). The choice lives in the URL, like the filters.
+ */
+const VIEW_DEFAULTS = { view: '' }
+
 function GrantsPage() {
+  const { filters, setFilter } = useUrlFilters(VIEW_DEFAULTS)
+  const receipts = filters.view === 'receipts'
+  const views = (
+    <div className="pillrow" role="radiogroup" aria-label="Show" style={{ marginBottom: 'var(--space-4)' }}>
+      {[{ key: '', label: 'Grants' }, { key: 'receipts', label: 'Receipts' }].map((v) => (
+        <button
+          key={v.label}
+          type="button"
+          className="pill"
+          data-active={(v.key === 'receipts') === receipts}
+          aria-pressed={(v.key === 'receipts') === receipts}
+          onClick={() => setFilter('view', v.key)}
+        >
+          {v.label}
+        </button>
+      ))}
+    </div>
+  )
+  return receipts ? <ReceiptsRegister views={views} /> : <GrantsList views={views} />
+}
+
+function GrantsList({ views }: { views: React.ReactNode }) {
   const navigate = useNavigate()
   const { employees } = useEmployees()
   const access = useAccess()
@@ -99,6 +128,8 @@ function GrantsPage() {
       : SELECT_COLS
 
     let q = supabase.from('fr_grants').select(cols, { count: 'exact' }).is('deleted_at', null)
+      // Removed receipts leave the received totals.
+      .is('fr_tranches.fr_remittances.deleted_at', null)
 
     if (filters.q) q = q.ilike('fr_organisations.name', `%${sanitizeSearch(filters.q)}%`)
     const owner = effectiveOwner(filters.owner, access.employeeId)
@@ -148,6 +179,8 @@ function GrantsPage() {
         </div>
         <Button iconLeft={<Plus size={15} />} onClick={() => setAddOpen(true)}>Add grant</Button>
       </div>
+
+      {views}
 
       <div className="filterbar">
         <SearchInput

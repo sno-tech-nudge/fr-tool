@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Lock } from 'lucide-react'
+import { Lock, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
   Badge, Button, ConfirmDialog, Drawer, Input, Select, Skeleton, useToast,
 } from '../ui'
 import { RECEIPT_TYPES, labelOf } from '../../lib/enums'
 import { formatDate, formatMoney, toISODate } from '../../lib/format'
-import { latestRateToInr } from '../../lib/fx'
+import { rateToInrOn } from '../../lib/fx'
 import { useAccess } from '../../lib/accessContext'
+import { confirmReceipt, syncTrancheStatus, usePaymentAccess } from '../../lib/payments'
 import { useBankAccounts, accountsFor } from '../../hooks/useBankAccounts'
 
 export type Remittance = {
@@ -33,16 +34,17 @@ type TrancheLite = {
   amount: number
   currency: string
   amount_inr_expected: number | null
+  status?: string | null
 }
 
 /**
- * Receipts against one instalment.
+ * Receipts against one instalment: recorded by the team, corrected or removed
+ * while unconfirmed, then confirmed and locked by finance.
  *
- * Two guardrails live here. The bank-account list is filtered to the grant's
- * FCRA side — the database trigger rejects a mismatch, so offering the illegal
- * option would only produce a slower error. And a confirmed receipt is locked:
- * the UPDATE policy blocks edits server-side, and unlocking is deliberately a
- * manual SQL step by a manager, so the UI offers no way back.
+ * Guardrails: the bank-account list is filtered to the grant's FCRA side (the
+ * database rejects a mismatch anyway); a confirmed receipt is locked, and
+ * unlocking is a manual SQL step by a manager, so the UI offers no way back.
+ * Removing a receipt is a soft delete — it leaves every total but stays on file.
  */
 export function RemittanceDrawer({
   open, tranche, grantIsFcra, defaultBankAccountId, onClose, onSaved,
@@ -61,17 +63,25 @@ export function RemittanceDrawer({
   const [rows, setRows] = useState<Remittance[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState<Remittance | null>(null)
+  const [removing, setRemoving] = useState<Remittance | null>(null)
+  // The receipt being corrected; null while recording a new one.
+  const [editing, setEditing] = useState<Remittance | null>(null)
 
   const [date, setDate] = useState('')
   const [amount, setAmount] = useState('')
   const [rate, setRate] = useState('1')
+  // Once someone types a rate, a date change no longer overwrites it.
+  const [rateTouched, setRateTouched] = useState(false)
   const [bankAccountId, setBankAccountId] = useState('')
   const [reference, setReference] = useState('')
   const [receiptType, setReceiptType] = useState('')
+  // A reference already used elsewhere is flagged once; saving again proceeds.
+  const [warnedRef, setWarnedRef] = useState<string | null>(null)
 
   const currency = tranche?.currency ?? 'INR'
   const legalAccounts = accountsFor(accounts, grantIsFcra)
-  const canConfirm = access.isManager || access.frSubRole === 'finance'
+  // Both are enforced in the database too; this only hides what would be refused.
+  const { canConfirm, canEnter } = usePaymentAccess()
 
   const load = useCallback(async () => {
     if (!tranche) return
@@ -80,98 +90,137 @@ export function RemittanceDrawer({
       .from('fr_remittances')
       .select('*')
       .eq('tranche_id', tranche.id)
+      .is('deleted_at', null)
       .order('received_date')
     setRows((data ?? []) as Remittance[])
   }, [tranche])
 
   useEffect(() => { if (open) void load() }, [open, load])
 
-  // Reset the composer each time the drawer opens, pre-filling what we know:
-  // the instalment's own amount, today's date, and the grant's usual account.
-  useEffect(() => {
-    if (!open || !tranche) return
+  const startNew = useCallback(() => {
+    if (!tranche) return
+    setEditing(null)
     setDate(toISODate(new Date()))
     setAmount(String(tranche.amount ?? ''))
     setReference('')
     setReceiptType('')
+    setRateTouched(false)
+    setWarnedRef(null)
     const preset = accounts.find((a) => a.id === defaultBankAccountId)
     setBankAccountId(preset && preset.is_fcra === grantIsFcra ? preset.id : '')
-    void (async () => {
-      const r = await latestRateToInr(currency)
-      setRate(r != null ? String(r) : '1')
-    })()
-  }, [open, tranche, accounts, defaultBankAccountId, grantIsFcra, currency])
+  }, [tranche, accounts, defaultBankAccountId, grantIsFcra])
+
+  // Reset the composer each time the drawer opens, pre-filling what we know:
+  // the instalment's own amount, today's date, and the grant's usual account.
+  useEffect(() => { if (open) startNew() }, [open, startNew])
+
+  // The suggested rate is the one for the received date, not today's.
+  useEffect(() => {
+    if (!open || rateTouched || currency === 'INR') return
+    let active = true
+    void rateToInrOn(currency, date || null).then((r) => { if (active) setRate(r != null ? String(r) : '1') })
+    return () => { active = false }
+  }, [open, date, currency, rateTouched])
+
+  function startEdit(r: Remittance) {
+    setEditing(r)
+    setDate(r.received_date ?? '')
+    setAmount(String(r.amount))
+    setRate(String(r.fx_rate_to_inr))
+    setRateTouched(true) // keep the rate it was recorded at unless changed
+    setBankAccountId(r.bank_account_id)
+    setReference(r.reference_number ?? '')
+    setReceiptType(r.receipt_type ?? '')
+    setWarnedRef(null)
+  }
+
+  async function settle(next: Remittance[]) {
+    setRows(next)
+    if (tranche) {
+      const total = next.reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
+      await syncTrancheStatus(tranche, total, access.employeeId)
+    }
+    onSaved()
+  }
 
   async function save() {
     if (!tranche) return
     if (!date) { toast.error('A received date is required.'); return }
-    if (!amount) { toast.error('An amount is required.'); return }
+    if (date > toISODate(new Date())) { toast.error('The received date cannot be in the future.'); return }
+    if (!amount || !(Number(amount) > 0)) { toast.error('Enter the amount received.'); return }
     if (!bankAccountId) { toast.error('Pick the receiving account.'); return }
+
+    const ref = reference.trim()
+    if (ref && warnedRef !== ref) {
+      let dup = supabase.from('fr_remittances').select('id', { count: 'exact', head: true })
+        .eq('reference_number', ref).is('deleted_at', null)
+      if (editing) dup = dup.neq('id', editing.id)
+      const { count } = await dup
+      if (count) {
+        setWarnedRef(ref)
+        toast.error('That reference is already on another receipt. Save again to record it anyway.')
+        return
+      }
+    }
 
     const value = Number(amount)
     const fx = Number(rate) || 1
+    const fields = {
+      received_date: date,
+      amount: value,
+      currency,
+      fx_rate_to_inr: fx,
+      amount_inr: Math.round(value * fx * 100) / 100,
+      bank_account_id: bankAccountId,
+      reference_number: ref || null,
+      receipt_type: receiptType || null,
+      updated_by: access.employeeId,
+    }
 
     setBusy(true)
-    const { data, error } = await supabase
-      .from('fr_remittances')
-      .insert({
-        tranche_id: tranche.id,
-        received_date: date,
-        amount: value,
-        currency,
-        fx_rate_to_inr: fx,
-        amount_inr: Math.round(value * fx * 100) / 100,
-        bank_account_id: bankAccountId,
-        reference_number: reference.trim() || null,
-        receipt_type: receiptType || null,
-        created_by: access.employeeId,
-      })
-      .select()
-      .single()
+    const res = editing
+      ? await supabase.from('fr_remittances').update(fields).eq('id', editing.id).select().single()
+      : await supabase.from('fr_remittances')
+          .insert({ ...fields, tranche_id: tranche.id, created_by: access.employeeId })
+          .select()
+          .single()
+    setBusy(false)
 
-    if (error) {
-      setBusy(false)
-      toast.error(error.message.includes('FCRA routing violation')
+    if (res.error) {
+      toast.error(res.error.message.includes('FCRA routing violation')
         ? 'That account is on the wrong side of the FCRA line for this grant.'
-        : error.message)
+        : res.error.message)
       return
     }
 
-    const next = [...(rows ?? []), data as Remittance]
-    setRows(next)
-
-    // Once the instalment is fully covered it stops being outstanding. Partial
-    // receipts leave the status alone — it is still owed.
-    const total = next.reduce((s, r) => s + Number(r.amount_inr ?? 0), 0)
-    const expected = Number(tranche.amount_inr_expected ?? tranche.amount ?? 0)
-    if (expected > 0 && total >= expected) {
-      await supabase.from('fr_tranches')
-        .update({ status: 'received', updated_by: access.employeeId })
-        .eq('id', tranche.id)
-    }
-
-    setBusy(false)
-    setAmount('')
-    setReference('')
-    toast.success('Receipt recorded.')
-    onSaved()
+    const saved = res.data as Remittance
+    const next = editing
+      ? (rows ?? []).map((r) => (r.id === saved.id ? saved : r))
+      : [...(rows ?? []), saved]
+    toast.success(editing ? 'Receipt updated.' : 'Receipt recorded.')
+    startNew()
+    await settle(next)
   }
 
-  async function confirmAndLock(r: Remittance) {
-    setConfirming(null)
-    const { data, error } = await supabase
+  async function remove(r: Remittance) {
+    setRemoving(null)
+    const { error } = await supabase
       .from('fr_remittances')
-      .update({
-        confirmed_by_finance: true,
-        confirmed_by_user_id: access.employeeId,
-        confirmed_at: new Date().toISOString(),
-        is_locked: true,
-        updated_by: access.employeeId,
-      })
+      .update({ deleted_at: new Date().toISOString(), deleted_by: access.employeeId, updated_by: access.employeeId })
       .eq('id', r.id)
       .select()
       .single()
     if (error) { toast.error(error.message); return }
+    if (editing?.id === r.id) startNew()
+    toast.success('Receipt removed.')
+    await settle((rows ?? []).filter((x) => x.id !== r.id))
+  }
+
+  async function confirmAndLock(r: Remittance) {
+    setConfirming(null)
+    const { data, error } = await confirmReceipt(r.id, access.employeeId)
+    if (error) { toast.error(error.message); return }
+    if (editing?.id === r.id) startNew()
     setRows((prev) => (prev ?? []).map((x) => (x.id === r.id ? (data as Remittance) : x)))
     toast.success('Confirmed and locked.')
     onSaved()
@@ -189,74 +238,78 @@ export function RemittanceDrawer({
       footer={<Button variant="ghost" onClick={onClose}>Close</Button>}
     >
       <div className="stack">
-        <div className="card stack">
-          <div className="tn-micro">Record a receipt</div>
+        {canEnter ? (
+          <div className="card stack">
+            <div className="tn-micro">{editing ? 'Correct this receipt' : 'Record a receipt'}</div>
 
-          <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
-            <div className="grow">
-              <Input
-                label="Received on"
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.currentTarget.value)}
-              />
+            <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+              <div className="grow">
+                <Input
+                  label="Received on"
+                  type="date"
+                  required
+                  max={toISODate(new Date())}
+                  value={date}
+                  onChange={(e) => setDate(e.currentTarget.value)}
+                />
+              </div>
+              <div className="grow">
+                <Input
+                  label={`Amount (${currency})`}
+                  type="number"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.currentTarget.value)}
+                />
+              </div>
             </div>
-            <div className="grow">
+
+            {currency !== 'INR' ? (
               <Input
-                label={`Amount (${currency})`}
+                label="FX rate (INR per 1 unit)"
                 type="number"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.currentTarget.value)}
+                value={rate}
+                onChange={(e) => { setRate(e.currentTarget.value); setRateTouched(true) }}
+                help={amount ? `${formatMoney(Number(amount) * (Number(rate) || 1))} at this rate.` : undefined}
               />
-            </div>
-          </div>
+            ) : null}
 
-          {currency !== 'INR' ? (
-            <Input
-              label="FX rate (INR per 1 unit)"
-              type="number"
-              value={rate}
-              onChange={(e) => setRate(e.currentTarget.value)}
-              help={amount ? `${formatMoney(Number(amount) * (Number(rate) || 1))} at this rate.` : undefined}
-            />
-          ) : null}
-
-          <Select
-            label="Received into"
-            required
-            value={bankAccountId}
-            onChange={(e) => setBankAccountId(e.currentTarget.value)}
-          >
-            <option value="">—</option>
-            {legalAccounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-          </Select>
-
-          <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
-            <div className="grow">
-              <Input
-                label="Reference number"
-                value={reference}
-                onChange={(e) => setReference(e.currentTarget.value)}
-              />
-            </div>
             <Select
-              label="Receipt type"
-              value={receiptType}
-              onChange={(e) => setReceiptType(e.currentTarget.value)}
+              label="Received into"
+              required
+              value={bankAccountId}
+              onChange={(e) => setBankAccountId(e.currentTarget.value)}
             >
               <option value="">—</option>
-              {RECEIPT_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {legalAccounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
             </Select>
-          </div>
 
-          <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <Button onClick={() => void save()} disabled={busy}>
-              {busy ? 'Saving…' : 'Record receipt'}
-            </Button>
+            <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+              <div className="grow">
+                <Input
+                  label="Reference number"
+                  value={reference}
+                  onChange={(e) => setReference(e.currentTarget.value)}
+                />
+              </div>
+              <Select
+                label="Receipt type"
+                value={receiptType}
+                onChange={(e) => setReceiptType(e.currentTarget.value)}
+              >
+                <option value="">—</option>
+                {RECEIPT_TYPES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            </div>
+
+            <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+              {editing ? <Button variant="ghost" onClick={startNew} disabled={busy}>Cancel</Button> : null}
+              <Button onClick={() => void save()} disabled={busy}>
+                {busy ? 'Saving…' : editing ? 'Save changes' : 'Record receipt'}
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="tn-micro">
           {rows === null ? 'Receipts' : `${formatMoney(received)} of ${formatMoney(expected)} received`}
@@ -271,15 +324,15 @@ export function RemittanceDrawer({
             <table className="table">
               <thead>
                 <tr>
-                  <th style={{ width: '120px' }}>Date</th>
-                  <th style={{ width: '130px' }}>Amount</th>
+                  <th style={{ width: '110px' }}>Date</th>
+                  <th style={{ width: '120px' }}>Amount</th>
                   <th>Reference</th>
-                  <th style={{ width: '150px' }}>&nbsp;</th>
+                  <th style={{ width: '170px' }}>&nbsp;</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} data-active={editing?.id === r.id || undefined}>
                     <td className="tn-num">{formatDate(r.received_date)}</td>
                     <td className="tn-num">
                       {formatMoney(r.amount_inr)}
@@ -299,13 +352,25 @@ export function RemittanceDrawer({
                     </td>
                     <td>
                       {r.is_locked ? (
-                        <Badge tone="green"><Lock size={11} /> Locked</Badge>
-                      ) : canConfirm ? (
-                        <Button size="sm" variant="secondary" onClick={() => setConfirming(r)}>
-                          Confirm
-                        </Button>
+                        <Badge tone="green"><Lock size={11} /> Confirmed</Badge>
                       ) : (
-                        <span className="faint">Awaiting finance</span>
+                        <div className="row" style={{ gap: 'var(--space-1)', justifyContent: 'flex-end' }}>
+                          {canConfirm ? (
+                            <Button size="sm" variant="secondary" onClick={() => setConfirming(r)}>Confirm</Button>
+                          ) : (
+                            <span className="faint" style={{ marginRight: 'auto' }}>Awaiting finance</span>
+                          )}
+                          {canEnter ? (
+                            <>
+                              <Button size="sm" variant="ghost" aria-label="Correct receipt" onClick={() => startEdit(r)}>
+                                <Pencil size={13} />
+                              </Button>
+                              <Button size="sm" variant="ghost" aria-label="Remove receipt" onClick={() => setRemoving(r)}>
+                                <Trash2 size={13} />
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -319,10 +384,20 @@ export function RemittanceDrawer({
       <ConfirmDialog
         open={confirming !== null}
         title="Confirm and lock this receipt?"
-        body="It becomes permanently read-only. Only a manager can unlock it afterwards, directly in the database."
+        body="Check it against the bank statement first. It becomes read-only; only a manager can unlock it, in the database."
         confirmLabel="Confirm and lock"
         onCancel={() => setConfirming(null)}
         onConfirm={() => { if (confirming) void confirmAndLock(confirming) }}
+      />
+
+      <ConfirmDialog
+        open={removing !== null}
+        title="Remove this receipt?"
+        body="It leaves the totals for this instalment and grant. The record is kept and can be restored in the database."
+        confirmLabel="Remove"
+        destructive
+        onCancel={() => setRemoving(null)}
+        onConfirm={() => { if (removing) void remove(removing) }}
       />
     </Drawer>
   )

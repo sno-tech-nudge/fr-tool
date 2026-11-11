@@ -117,6 +117,7 @@ with received as (
   select t.grant_id, sum(r.amount_inr) as received_inr
   from public.fr_tranches t
   join public.fr_remittances r on r.tranche_id = t.id
+  where r.deleted_at is null
   group by t.grant_id
 )
 select
@@ -166,6 +167,7 @@ create view public.v_fr_tranche_facts with (security_invoker = on) as
 with received as (
   select r.tranche_id, sum(r.amount_inr) as received_inr
   from public.fr_remittances r
+  where r.deleted_at is null
   group by r.tranche_id
 )
 select
@@ -255,10 +257,16 @@ select
   r.confirmed_at,
   r.is_locked,
   t.owner_user_id,
-  t.owner_name
+  t.owner_name,
+  -- Appended for the finance "to confirm" list.
+  t.sequence_no,
+  r.created_at,
+  cb.name                                   as recorded_by_name
 from public.fr_remittances r
 join public.v_fr_tranche_facts t    on t.id = r.tranche_id
-left join public.fr_bank_accounts b on b.id = r.bank_account_id;
+left join public.fr_bank_accounts b on b.id = r.bank_account_id
+left join public.employees cb       on cb.id = r.created_by
+where r.deleted_at is null;
 
 comment on view public.v_fr_remittance_facts is
   'One row per remittance with bank/FCRA context and mismatch flag. RLS-aware.';

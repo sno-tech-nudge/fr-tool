@@ -483,6 +483,7 @@ function OrgGrants({ organisationId }: { organisationId: string }) {
       .from('fr_grants')
       .select('id, agreement_number, total_value_inr, is_fcra, start_date, end_date, status, '
         + 'owner_user_id, fr_tranches(fr_remittances(amount_inr))')
+      .is('fr_tranches.fr_remittances.deleted_at', null)
       .eq('organisation_id', organisationId)
       .is('deleted_at', null)
       .order('signed_date', { ascending: false })

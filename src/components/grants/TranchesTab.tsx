@@ -9,6 +9,7 @@ import { TRANCHE_STATUSES, TRANCHE_TRIGGERS, labelOf, trancheTone } from '../../
 import { formatDate, formatMoney, toISODate } from '../../lib/format'
 import { daysUntil, isTrancheOverdue } from '../../lib/grants'
 import { useAccess } from '../../lib/accessContext'
+import { usePaymentAccess } from '../../lib/payments'
 import { DictationTextarea } from '../DictationTextarea'
 import { notifyMentions, useFrPeople } from '../../lib/mentions'
 
@@ -71,6 +72,7 @@ export function TranchesTab({
 }) {
   const toast = useToast()
   const access = useAccess()
+  const { canEnter } = usePaymentAccess()
 
   const [rows, setRows] = useState<Tranche[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +90,7 @@ export function TranchesTab({
     const { data, error: err } = await supabase
       .from('fr_tranches')
       .select(SELECT_COLS)
+      .is('fr_remittances.deleted_at', null)
       .eq('grant_id', grantId)
       .order('sequence_no')
     if (err) { setError(err.message); setRows([]); return }
@@ -211,7 +214,7 @@ export function TranchesTab({
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="row" style={{ gap: 'var(--space-2)' }}>
                           <Button size="sm" variant="secondary" onClick={() => setReceiving(t)}>
-                            Record receipt
+                            {canEnter ? 'Record receipt' : 'Receipts'}
                           </Button>
                           <Button
                             size="sm"
