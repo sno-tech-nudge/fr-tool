@@ -238,6 +238,10 @@ function OpportunityDetail() {
               { label: 'Expected close', value: <span className="tn-num">{formatDate(opp.expected_close_date)}</span> },
               { label: 'Fiscal year', value: opp.fiscal_year ? `${opp.fiscal_year} ${opp.fiscal_quarter ?? ''}`.trim() : null },
               { label: 'Owner', value: ownerName },
+              {
+                label: 'PM owner',
+                value: opp.pm_owner_user_id ? employees.find((e) => e.id === opp.pm_owner_user_id)?.name ?? null : null,
+              },
               { label: 'Geography', value: opp.geography },
               {
                 label: 'Next step',

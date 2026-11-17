@@ -43,6 +43,12 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     live: true,
   },
   {
+    key: 'deal_assigned',
+    label: 'Deals handed to me',
+    description: 'A won deal names me as its PM owner.',
+    live: true,
+  },
+  {
     key: 'tranche_due',
     label: 'Instalments due',
     description: 'Money expected on a grant I own, before and after the due date.',

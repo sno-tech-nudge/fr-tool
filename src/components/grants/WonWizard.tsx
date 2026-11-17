@@ -28,6 +28,8 @@ type WonOpportunity = {
   currency: string
   amount_inr: number | null
   owner_user_id: string
+  /** Who runs the partnership after the win; becomes the grant's owner. */
+  pm_owner_user_id?: string | null
   expected_close_date: string | null
 }
 
@@ -108,7 +110,7 @@ export function WonWizard({
     setTotalValue(opportunity.amount != null ? String(opportunity.amount) : '')
     setCurrency(opportunity.currency ?? 'INR')
     setIsFcra(false)
-    setOwnerId(opportunity.owner_user_id ?? '')
+    setOwnerId(opportunity.pm_owner_user_id ?? '')
     setBankAccountId('')
     setSocialMediaMention(false)
     setTrancheCount('4')
@@ -278,7 +280,7 @@ export function WonWizard({
     if (!opportunity) return
     if (!signedDate || !startDate || !endDate) { toast.error('Signed date and term are required.'); return }
     if (endDate < startDate) { toast.error('The end date cannot precede the start date.'); return }
-    if (!ownerId) { toast.error('Pick an owner.'); return }
+    if (!ownerId) { toast.error('Pick the PM owner.'); return }
 
     setBusy(true)
     try {
@@ -392,7 +394,8 @@ export function WonWizard({
 
       const { error: linkErr } = await supabase
         .from('fr_opportunities')
-        .update({ won_grant_id: grantId, updated_by: access.employeeId })
+        // The PM owner is recorded on the deal too; the NBD owner stays its owner.
+        .update({ won_grant_id: grantId, pm_owner_user_id: ownerId, updated_by: access.employeeId })
         .eq('id', opportunity.id)
       if (linkErr) problems.push('the link back to the opportunity')
 
@@ -529,12 +532,12 @@ export function WonWizard({
                 </div>
               </div>
               <Select
-                label="Owner"
+                label="PM owner"
                 required
                 value={ownerId}
                 onChange={(e) => setOwnerId(e.currentTarget.value)}
               >
-                <option value="">—</option>
+                <option value="">Who manages this partnership?</option>
                 {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
               </Select>
               <Checkbox

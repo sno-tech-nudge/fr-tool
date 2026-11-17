@@ -103,7 +103,8 @@ function OpportunitiesPage() {
 
     if (filters.q) q = q.ilike('name', `%${sanitizeSearch(filters.q)}%`)
     const owner = effectiveOwner(filters.owner, access.employeeId)
-    if (owner) q = q.eq('owner_user_id', owner)
+    // "Mine" covers deals I own and deals handed to me as PM owner.
+    if (owner) q = q.or(`owner_user_id.eq.${owner},pm_owner_user_id.eq.${owner}`)
     if (filters.capital_category) q = q.eq('capital_category', filters.capital_category)
     if (filters.deal_category) q = q.eq('deal_category', filters.deal_category)
     const fys = parseFyList(filters.fy)

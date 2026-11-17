@@ -28,6 +28,8 @@ export type Opportunity = {
   fiscal_year: string | null
   fiscal_quarter: string | null
   owner_user_id: string
+  /** Set when the deal closes won: who manages the partnership from then on. */
+  pm_owner_user_id?: string | null
   geography: string | null
   next_step: string | null
   next_step_date: string | null
@@ -47,7 +49,7 @@ type Currency = { code: string; name: string }
 const EMPTY = {
   name: '', organisation_id: '', primary_contact_id: '', capital_category: 'programmatic',
   opportunity_type: 'new', stage_id: '', amount: '', currency: 'INR', probability_pct: '',
-  expected_close_date: '', owner_user_id: '', geography: '', next_step: '', next_step_date: '',
+  expected_close_date: '', owner_user_id: '', pm_owner_user_id: '', geography: '', next_step: '', next_step_date: '',
   deal_category: 'NBD', is_confidential: false, notes: '',
 }
 type Draft = typeof EMPTY
@@ -66,6 +68,7 @@ function toDraft(o: Opportunity | null, defaults: { owner: string | null; stageI
     probability_pct: o.probability_pct != null ? String(o.probability_pct) : '',
     expected_close_date: o.expected_close_date ?? '',
     owner_user_id: o.owner_user_id ?? '',
+    pm_owner_user_id: o.pm_owner_user_id ?? '',
     geography: o.geography ?? '',
     next_step: o.next_step ?? '',
     next_step_date: o.next_step_date ?? '',
@@ -179,6 +182,7 @@ export function OpportunityForm({
         probability_pct: draft.probability_pct ? Number(draft.probability_pct) : null,
         expected_close_date: draft.expected_close_date || null,
         owner_user_id: draft.owner_user_id,
+        pm_owner_user_id: draft.pm_owner_user_id || null,
         geography: draft.geography.trim() || null,
         next_step: draft.next_step.trim() || null,
         next_step_date: draft.next_step_date || null,
@@ -336,6 +340,12 @@ export function OpportunityForm({
           <div className="grow">
             <Select label="Owner" required value={draft.owner_user_id} onChange={(e) => set('owner_user_id', e.currentTarget.value)}>
               <option value="">Select an owner</option>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </Select>
+          </div>
+          <div className="grow">
+            <Select label="PM owner" value={draft.pm_owner_user_id} onChange={(e) => set('pm_owner_user_id', e.currentTarget.value)}>
+              <option value="">—</option>
               {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
             </Select>
           </div>
