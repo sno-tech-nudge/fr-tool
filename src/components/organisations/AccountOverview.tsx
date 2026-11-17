@@ -22,7 +22,8 @@ import {
  */
 
 const SAVE_DELAY = 800
-const RAGS: Rag[] = ['green', 'amber', 'red']
+// Always red, amber, green — worst first.
+const RAGS: Rag[] = ['red', 'amber', 'green']
 const SENIOR = new Set(['cxo', 'senior_leadership', 'trustee'])
 
 function monthYear(d: string | null): string | null {
@@ -338,9 +339,9 @@ function RagPicker({ value, auto, onChange }: { value: Rag | null; auto: Rag | n
   )
 }
 
-/** One dot that steps through the ratings on click: green, amber, red, none. */
+/** One dot that steps through the ratings on click: red, amber, green, none. */
 function RagCycle({ value, name, onChange }: { value: Rag | null; name: string; onChange: (v: Rag | null) => void }) {
-  const next: Rag | null = value === null ? 'green' : value === 'green' ? 'amber' : value === 'amber' ? 'red' : null
+  const next: Rag | null = value === null ? 'red' : value === 'red' ? 'amber' : value === 'amber' ? 'green' : null
   return (
     <button
       type="button"

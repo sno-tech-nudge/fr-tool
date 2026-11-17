@@ -31,6 +31,7 @@ type Notification = {
 function target(n: Notification): { to: string; params?: { id: string }; search?: Record<string, string> } | null {
   if (n.category === 'receipt_to_confirm') return { to: '/grants', search: { view: 'receipts', receipt: 'awaiting' } }
   if (!n.parent_id) return null
+  if (n.category === 'tranche_due' && n.parent_type === 'grant') return { to: '/grants/$id', params: { id: n.parent_id }, search: { tab: 'money' } }
   if (n.parent_type === 'opportunity') return { to: '/opportunities/$id', params: { id: n.parent_id } }
   if (n.parent_type === 'grant') return { to: '/grants/$id', params: { id: n.parent_id } }
   if (n.parent_type === 'organisation') return { to: '/organisations/$id', params: { id: n.parent_id } }

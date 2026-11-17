@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { EscalationTimelines } from '../components/admin/EscalationTimelines'
 import { NotificationPreferences } from '../components/admin/NotificationPreferences'
 import { LatestNewsRun } from '../components/admin/LatestNewsRun'
+import { InstalmentReminders } from '../components/admin/InstalmentReminders'
 
 export const Route = createFileRoute('/_app/admin/notifications')({ component: NotificationsRoute })
 
@@ -17,6 +18,13 @@ function NotificationsRoute() {
           <div className="tn-micro">Escalation timelines</div>
         </div>
         <EscalationTimelines />
+      </section>
+
+      <section className="card stack">
+        <div>
+          <div className="tn-micro">Instalment reminders</div>
+        </div>
+        <InstalmentReminders />
       </section>
 
       <section className="card stack">

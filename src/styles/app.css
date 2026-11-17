@@ -1898,3 +1898,8 @@ input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; marg
   font-size: var(--text-sm);
 }
 .table tr[data-active] td { background: color-mix(in srgb, var(--surface-taupe) 45%, transparent); }
+
+/* Instalment reminder thresholds */
+.remfields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 760px) { .remfields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.remfield .input { max-width: 120px; }

@@ -75,9 +75,9 @@ export function HealthRules() {
           <thead>
             <tr>
               <th style={{ width: '22%' }}>Measure</th>
-              <th><span className="ragdot" data-rag="green" /> Green</th>
-              <th><span className="ragdot" data-rag="amber" /> Amber</th>
               <th><span className="ragdot" data-rag="red" /> Red</th>
+              <th><span className="ragdot" data-rag="amber" /> Amber</th>
+              <th><span className="ragdot" data-rag="green" /> Green</th>
             </tr>
           </thead>
           <tbody>
@@ -86,27 +86,27 @@ export function HealthRules() {
                 Collection
                 <div className="faint rulesub">Received ÷ due so far</div>
               </td>
-              <td><span className="rulerow">At or above {num('collection_green_pct', '%')}</span></td>
-              <td><span className="rulerow">At or above {num('collection_amber_pct', '%')}</span></td>
               <td className="muted">Below amber</td>
+              <td><span className="rulerow">At or above {num('collection_amber_pct', '%')}</span></td>
+              <td><span className="rulerow">At or above {num('collection_green_pct', '%')}</span></td>
             </tr>
             <tr>
               <td>
                 Compliance
                 <div className="faint rulesub">Reports and milestones</div>
               </td>
-              <td className="muted">Nothing late or due soon</td>
-              <td><span className="rulerow">Due within {num('compliance_amber_within_days', 'days')}</span></td>
               <td><span className="rulerow">Overdue over {num('compliance_red_after_days', 'days')}</span></td>
+              <td><span className="rulerow">Due within {num('compliance_amber_within_days', 'days')}</span></td>
+              <td className="muted">Nothing late or due soon</td>
             </tr>
             <tr>
               <td>
                 Renewal / upsell
                 <div className="faint rulesub">Grants and open deals</div>
               </td>
-              <td className="muted">An open renewal or upsell deal</td>
-              <td><span className="rulerow">Grant ends within {num('renewal_amber_within_days', 'days')}</span></td>
               <td className="muted">—</td>
+              <td><span className="rulerow">Grant ends within {num('renewal_amber_within_days', 'days')}</span></td>
+              <td className="muted">An open renewal or upsell deal</td>
             </tr>
             <tr>
               <td>
