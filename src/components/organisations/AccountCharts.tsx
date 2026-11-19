@@ -15,10 +15,12 @@ const toCr = (v: number | null) => (v == null ? '' : String(Math.round((v / CROR
  * that ask for it.
  */
 export function WalletShareCard({
-  organisationId, years, onBudget,
+  organisationId, years, budgetRange, onBudget,
 }: {
   organisationId: string
   years: FyRow[]
+  /** Shown beside the question when only a range is known. */
+  budgetRange?: string | null
   onBudget: (fy: string, budgetInr: number | null) => void
 }) {
   const hasBudget = years.some((y) => y.budget != null)
@@ -50,18 +52,19 @@ export function WalletShareCard({
           line={{ key: 'share', label: 'Wallet share', color: 'var(--chart-3)' }}
         />
       </div>
-      {asking ? <BudgetInputs organisationId={organisationId} years={years} onBudget={onBudget} overlay={!hasBudget} /> : null}
+      {asking ? <BudgetInputs organisationId={organisationId} years={years} onBudget={onBudget} overlay={!hasBudget} range={budgetRange} /> : null}
     </section>
   )
 }
 
 function BudgetInputs({
-  organisationId, years, onBudget, overlay,
+  organisationId, years, onBudget, overlay, range,
 }: {
   organisationId: string
   years: FyRow[]
   onBudget: (fy: string, budgetInr: number | null) => void
   overlay: boolean
+  range?: string | null
 }) {
   const toast = useToast()
   const access = useAccess()
@@ -90,7 +93,12 @@ function BudgetInputs({
 
   return (
     <div className={overlay ? 'acctchart__ask' : 'acctchart__budgets'}>
-      {overlay ? <div className="acctchart__asktitle">Add the CSR budget</div> : null}
+      {overlay ? (
+        <div className="acctchart__asktitle">
+          Add the CSR budget
+          {range ? <span className="acctchart__range"> · range on file {range}</span> : null}
+        </div>
+      ) : null}
       <div className="acctchart__inputs">
         {years.map((y) => (
           <label key={y.fy} className="acctchart__input">

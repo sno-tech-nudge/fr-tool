@@ -161,6 +161,7 @@ export function AccountOverview({ org, ownerName }: { org: Organisation; ownerNa
         <WalletShareCard
           organisationId={org.id}
           years={data.years}
+          budgetRange={draft.csr_budget_range}
           onBudget={(fy, budget) => setData((d) => d && ({
             ...d,
             years: d.years.map((y) => (y.fy === fy

@@ -32,6 +32,8 @@ export type AccountPlan = {
   donor_delight_score: number | null
   /** "YYYY-MM" while editing; stored as the first of that month. */
   partner_since: string | null
+  /** A range from Zoho ("11 Cr – 50 Cr"), shown until an exact budget is entered. */
+  csr_budget_range?: string | null
 }
 
 export type PlanContact = {
@@ -90,6 +92,7 @@ export const EMPTY_PLAN = (organisationId: string): AccountPlan => ({
   health_compliance: null, health_relationship: null, health_renewal: null,
   donor_delight_score: null,
   partner_since: null,
+  csr_budget_range: null,
 })
 
 type GrantRow = {
