@@ -1,0 +1,182 @@
+/* ============================================================
+   Phone / installed-app styles.
+   Every rule is scoped to html[data-app-shell="pwa"], which PwaShell sets
+   (the same attribute Nucleus's PwaShell sets), so nothing here can reach
+   the desktop shell. A fix = a className hook + a scoped rule here.
+   ============================================================ */
+
+/* ---------- shell ---------- */
+html[data-app-shell="pwa"] .fr-pwa {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--surface);
+}
+
+/* min-height, not height: the safe-area padding must be able to grow it. */
+html[data-app-shell="pwa"] .fr-pwa__header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  min-height: calc(56px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) max(var(--space-4), env(safe-area-inset-right, 0px)) 0 max(var(--space-4), env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--surface-card);
+  border-bottom: var(--border-width) solid var(--border);
+}
+html[data-app-shell="pwa"] .fr-pwa__logo { width: 28px; height: 28px; border-radius: 6px; flex: none; }
+html[data-app-shell="pwa"] .fr-pwa__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html[data-app-shell="pwa"] .fr-pwa__actions { flex: none; display: flex; align-items: center; }
+html[data-app-shell="pwa"] .fr-pwa__actions .bell__button { width: 40px; height: 40px; }
+
+/* The page scrolls (the document), not <main>; the bottom padding clears the bar. */
+html[data-app-shell="pwa"] .fr-pwa__main {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + var(--space-4));
+}
+
+html[data-app-shell="pwa"] .fr-pwa__tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  display: flex;
+  background: var(--surface-card);
+  border-top: var(--border-width) solid var(--border);
+}
+/* Top-aligned at the old centred offset (60px bar, 34px content) so a label
+   that wraps to two lines never pushes its icon out of line with the rest. */
+html[data-app-shell="pwa"] .fr-pwa__tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 13px 2px 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-app-shell="pwa"] .fr-pwa__tab svg { flex: none; }
+html[data-app-shell="pwa"] .fr-pwa__tab[data-active='true'] { color: var(--ink); font-weight: var(--weight-medium); }
+
+/* More: a drop-up sheet above the bar; the bar stays tappable to close it. */
+html[data-app-shell="pwa"] .fr-pwa__scrim {
+  position: fixed;
+  inset: 0 0 calc(60px + env(safe-area-inset-bottom, 0px)) 0;
+  z-index: 39;
+  display: flex;
+  align-items: flex-end;
+  background: color-mix(in srgb, var(--brown-900) 35%, transparent);
+}
+html[data-app-shell="pwa"] .fr-pwa__sheet {
+  width: 100%;
+  max-height: 75vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  background: var(--surface-card);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+}
+html[data-app-shell="pwa"] .fr-pwa__sheethead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-3) var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: var(--border-width) solid var(--border);
+}
+html[data-app-shell="pwa"] .fr-pwa__user { min-width: 0; font-size: var(--text-xs); color: var(--text-muted); line-height: 1.4; }
+html[data-app-shell="pwa"] .fr-pwa__user strong { display: block; font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--ink); }
+html[data-app-shell="pwa"] .fr-pwa__close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+html[data-app-shell="pwa"] .fr-pwa__sheetitem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  text-align: left;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+html[data-app-shell="pwa"] .fr-pwa__sheetitem svg { flex: none; }
+html[data-app-shell="pwa"] .fr-pwa__sheetitem[data-active='true'] { background: var(--surface-paper); color: var(--ink); }
+html[data-app-shell="pwa"] .fr-pwa__sheetitem--hint { cursor: default; font-size: var(--text-sm); color: var(--text-muted); }
+
+/* ---------- page-wide ---------- */
+html[data-app-shell="pwa"] .page { padding: var(--space-4); }
+/* The desktop bell floats over the page head; here it lives in the header. */
+html[data-app-shell="pwa"] .page > .page__head:first-child,
+html[data-app-shell="pwa"] .page > .backlink:first-child + .page__head,
+html[data-app-shell="pwa"] .page > .backlink:first-child + .rechead .rechead__top { padding-right: 0; }
+/* iOS zooms into any field under 16px when it is focused. */
+html[data-app-shell="pwa"] :is(input, select, textarea) { font-size: 16px; }
+
+/* ---------- home: news ---------- */
+/* Search and Refresh take their own full-width row under the label. */
+html[data-app-shell="pwa"] .homesec__head:has(.newssearch) { flex-wrap: wrap; align-items: center; }
+html[data-app-shell="pwa"] .homesec__head:has(.newssearch) > .homesec__action { flex: 1 1 100%; }
+html[data-app-shell="pwa"] .homesec__action > .row:has(.newssearch) { width: 100%; }
+html[data-app-shell="pwa"] .newssearch { flex: 1 1 0; min-width: 0; width: auto; }
+html[data-app-shell="pwa"] .newssearch .searchbox { min-width: 0; height: 40px; }
+html[data-app-shell="pwa"] .homesec__action > .row:has(.newssearch) > .btn { min-height: 40px; }
+
+/* One card at a time, edge to edge, arrows riding on the card edges. */
+html[data-app-shell="pwa"] .newsrail { margin-inline: calc(-1 * var(--space-4)); }
+html[data-app-shell="pwa"] .newsrail__track {
+  gap: var(--space-3);
+  padding: 2px 22px var(--space-2);
+  scroll-padding-inline: 22px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+/* min-width: 0, or the card's one-line chip and footer set its width instead. */
+html[data-app-shell="pwa"] .newscard { flex: 0 0 100%; min-width: 0; box-sizing: border-box; padding: var(--space-4); }
+html[data-app-shell="pwa"] .newsrail__nav { width: 36px; height: 36px; }
+html[data-app-shell="pwa"] .newsrail__nav--prev { left: 4px; }
+html[data-app-shell="pwa"] .newsrail__nav--next { right: 4px; }

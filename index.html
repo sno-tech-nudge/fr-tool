@@ -2,7 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Fundraising" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script>
+      // Phones only: the manifest makes the app installable and theme-color
+      // tints the browser chrome. Laptops get neither, so desktop is untouched
+      // (no install button, no tinted toolbar). Keep in sync with isPhoneDevice() in src/lib/pwa.ts.
+      (function () {
+        var m = window.matchMedia
+        var phone = m('(max-width: 767px), (pointer: coarse), (display-mode: standalone)').matches || navigator.standalone === true
+        if (!phone) return
+        var link = document.createElement('link'); link.rel = 'manifest'; link.href = '/manifest.webmanifest'
+        var theme = document.createElement('meta'); theme.name = 'theme-color'; theme.content = '#ffffff'
+        var capable = document.createElement('meta'); capable.name = 'mobile-web-app-capable'; capable.content = 'yes'
+        document.head.append(link, theme, capable)
+      })()
+    </script>
     <title>Fundraising · The/Nudge</title>
     <link rel="stylesheet" href="/design-system/styles.css" />
   </head>

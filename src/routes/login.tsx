@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, createFileRoute } from '@tanstack/react-router'
 import { Button, Input, Skeleton } from '../components/ui'
 import { useAuth } from '../lib/auth'
+import { useIsMobile, useIsStandalone } from '../lib/pwa'
 
 export const Route = createFileRoute('/login')({ component: LoginPage })
 
@@ -11,6 +12,11 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Outside both shells, so no phone stylesheet reaches it: iOS zooms into
+  // any field under 16px on focus.
+  const isMobile = useIsMobile()
+  const isStandalone = useIsStandalone()
+  const fieldStyle = isMobile || isStandalone ? { fontSize: 16 } : undefined
 
   if (session) return <Navigate to="/" />
 
@@ -53,6 +59,7 @@ function LoginPage() {
               label="Email"
               type="email"
               autoComplete="username"
+              style={fieldStyle}
               required
               value={email}
               onChange={(e) => setEmail(e.currentTarget.value)}
@@ -61,6 +68,7 @@ function LoginPage() {
               label="Password"
               type="password"
               autoComplete="current-password"
+              style={fieldStyle}
               required
               value={password}
               onChange={(e) => setPassword(e.currentTarget.value)}

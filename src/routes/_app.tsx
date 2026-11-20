@@ -6,6 +6,8 @@ import { useAuth } from '../lib/auth'
 import { useFrAccess } from '../hooks/useFrAccess'
 import { FrAccessProvider } from '../lib/accessContext'
 import { MentionBell } from '../components/MentionBell'
+import { PwaShell } from '../components/pwa/PwaShell'
+import { useIsMobile, useIsStandalone } from '../lib/pwa'
 
 export const Route = createFileRoute('/_app')({ component: AppLayout })
 
@@ -28,6 +30,10 @@ function readStoredCollapsed(): boolean {
 function AppLayout() {
   const { session, loading, signOut } = useAuth()
   const access = useFrAccess()
+  // Installed app or a phone-narrow window: the phone shell, same pages.
+  const isStandalone = useIsStandalone()
+  const isMobile = useIsMobile()
+  const phone = isStandalone || isMobile
 
   // One boolean, read once from localStorage after mount (avoids a
   // server/client mismatch on first paint). Toggling it only ever flips the
@@ -45,9 +51,9 @@ function AppLayout() {
     })
   }
 
-  if (loading) return <BootSkeleton />
+  if (loading) return <BootSkeleton phone={phone} />
   if (!session) return <Navigate to="/login" />
-  if (access.loading) return <BootSkeleton />
+  if (access.loading) return <BootSkeleton phone={phone} />
 
   if (access.error) {
     return (
@@ -69,6 +75,14 @@ function AppLayout() {
     )
   }
 
+  if (phone) {
+    return (
+      <FrAccessProvider value={access}>
+        <PwaShell><Outlet /></PwaShell>
+      </FrAccessProvider>
+    )
+  }
+
   return (
     <FrAccessProvider value={access}>
       <div className="app" data-sidebar={sidebarCollapsed ? 'collapsed' : undefined}>
@@ -85,7 +99,15 @@ function AppLayout() {
   )
 }
 
-function BootSkeleton() {
+function BootSkeleton({ phone }: { phone: boolean }) {
+  if (phone) {
+    return (
+      <div className="page stack">
+        <Skeleton height={26} width="50%" />
+        <Skeleton height={120} />
+      </div>
+    )
+  }
   return (
     <div className="app">
       <aside className="sidebar">

@@ -3,8 +3,12 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import './styles/app.css'
+import './styles/pwa.css'
+import { registerServiceWorker } from './lib/pwa'
 
 const router = createRouter({ routeTree })
+
+registerServiceWorker()
 
 // Number fields: the mouse wheel scrolls the page, never the value. A focused
 // number input changes on wheel by default, so it is let go before the wheel
