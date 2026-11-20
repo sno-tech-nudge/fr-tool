@@ -240,7 +240,7 @@ export function GrantForm({
   }
 
   async function save() {
-    if (isNew && !draft.organisation_id) { toast.error('Pick the donor organisation.'); return }
+    if (isNew && !draft.organisation_id) { toast.error('Pick the donor company.'); return }
     if (!draft.signed_date) { toast.error('Signed date is required.'); return }
     if (!draft.start_date || !draft.end_date) { toast.error('The grant term is required.'); return }
     if (draft.end_date < draft.start_date) { toast.error('The end date cannot precede the start date.'); return }
@@ -389,7 +389,7 @@ export function GrantForm({
         {isNew ? (
           <>
             <OrganisationPicker
-              label="Donor organisation"
+              label="Donor company"
               value={draft.organisation_id}
               onChange={(v) => set('organisation_id', v)}
             />

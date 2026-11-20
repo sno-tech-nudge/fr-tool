@@ -9,6 +9,7 @@ import { useAccess } from '../../lib/accessContext'
 import { useEmployees } from '../../hooks/useEmployees'
 import { usePipelineStages } from '../../hooks/usePipelineStages'
 import { OrganisationPicker } from '../organisations/OrganisationPicker'
+import { DealContactPicker, type NewContact } from '../contacts/DealContactPicker'
 import { DictationTextarea } from '../DictationTextarea'
 import { notifyMentions, useFrPeople } from '../../lib/mentions'
 
@@ -103,6 +104,9 @@ export function OpportunityForm({
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [contacts, setContacts] = useState<Array<{ id: string; full_name: string }>>([])
   const [busy, setBusy] = useState(false)
+  // A company or contact typed in but not yet saved; both are created with the deal.
+  const [newCompany, setNewCompany] = useState<string | null>(null)
+  const [newContact, setNewContact] = useState<NewContact | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -110,6 +114,8 @@ export function OpportunityForm({
       owner: access.employeeId,
       stageId: stages[0]?.id ?? '',
     }))
+    setNewCompany(null)
+    setNewContact(null)
   }, [open, opportunity, access.employeeId, stages])
 
   useEffect(() => {
@@ -153,12 +159,49 @@ export function OpportunityForm({
 
   async function save() {
     if (!draft.name.trim()) { toast.error('Name is required.'); return }
-    if (!draft.organisation_id) { toast.error('Pick an organisation.'); return }
+    if (!draft.organisation_id && !newCompany) { toast.error('Pick or add a company.'); return }
     if (!draft.owner_user_id) { toast.error('Pick an owner.'); return }
     if (!draft.stage_id) { toast.error('Pick a stage.'); return }
 
     setBusy(true)
     try {
+      // A new company first, then its new contact, so the deal can point at both.
+      let organisationId = draft.organisation_id
+      if (!organisationId && newCompany) {
+        const { data, error } = await supabase.from('fr_organisations').insert({
+          name: newCompany.trim(),
+          donor_type: 'corporate',
+          relationship_status: 'prospect',
+          relationship_owner_user_id: draft.owner_user_id,
+          created_by: access.employeeId,
+          updated_by: access.employeeId,
+        }).select('id').single()
+        if (error) throw new Error(`Could not add the company: ${error.message}`)
+        organisationId = (data as { id: string }).id
+        set('organisation_id', organisationId)
+        setNewCompany(null)
+      }
+      let contactId = draft.primary_contact_id
+      if (!contactId && newContact?.full_name.trim()) {
+        const { data, error } = await supabase.from('fr_contacts').insert({
+          organisation_id: organisationId,
+          full_name: newContact.full_name.trim(),
+          phone: newContact.phone.trim() || null,
+          email: newContact.email.trim() || null,
+          relationship_owner_user_id: draft.owner_user_id,
+          created_by: access.employeeId,
+          updated_by: access.employeeId,
+        }).select('id').single()
+        if (error) throw new Error(`Could not add the contact: ${error.message}`)
+        contactId = (data as { id: string }).id
+        set('primary_contact_id', contactId)
+        setNewContact(null)
+      }
+
+      // Win % comes from the stage unless the deal already carries its own.
+      const stage = stages.find((s) => s.id === draft.stage_id)
+      const probability = draft.probability_pct ? Number(draft.probability_pct) : stage?.probability_pct ?? null
+
       const amount = draft.amount ? Number(draft.amount) : null
       let amountInr: number | null = null
       if (amount != null) {
@@ -171,15 +214,15 @@ export function OpportunityForm({
 
       const payload = {
         name: draft.name.trim(),
-        organisation_id: draft.organisation_id,
-        primary_contact_id: draft.primary_contact_id || null,
+        organisation_id: organisationId,
+        primary_contact_id: contactId || null,
         capital_category: draft.capital_category,
         opportunity_type: draft.opportunity_type,
         stage_id: draft.stage_id,
         amount,
         currency: draft.currency,
         amount_inr: amountInr,
-        probability_pct: draft.probability_pct ? Number(draft.probability_pct) : null,
+        probability_pct: probability,
         expected_close_date: draft.expected_close_date || null,
         owner_user_id: draft.owner_user_id,
         pm_owner_user_id: draft.pm_owner_user_id || null,
@@ -214,7 +257,7 @@ export function OpportunityForm({
         })
       }
 
-      toast.success(isNew ? 'Opportunity added.' : 'Saved.')
+      toast.success(isNew ? 'Deal added.' : 'Saved.')
       void notifyMentions({
         before: opportunity?.notes, after: draft.notes, people,
         parentType: 'opportunity', parentId: saved.id, selfId: access.employeeId,
@@ -231,7 +274,7 @@ export function OpportunityForm({
   return (
     <Drawer
       open={open}
-      title={opportunity ? 'Edit opportunity' : 'Add opportunity'}
+      title={opportunity ? 'Edit deal' : 'Add deal'}
       onClose={onClose}
       width={540}
       footer={
@@ -250,37 +293,26 @@ export function OpportunityForm({
         />
 
         <OrganisationPicker
-          label="Organisation"
+          label="Company"
           required
           value={draft.organisation_id}
-          onChange={(v) => { set('organisation_id', v); set('primary_contact_id', '') }}
+          onChange={(v) => { set('organisation_id', v); set('primary_contact_id', ''); setNewContact(null) }}
+          newName={newCompany}
+          onNew={(name) => { setNewCompany(name); set('primary_contact_id', ''); setNewContact(null) }}
         />
 
-        <Select
-          label="Primary contact"
+        <DealContactPicker
+          contacts={contacts}
           value={draft.primary_contact_id}
-          onChange={(e) => set('primary_contact_id', e.currentTarget.value)}
-          help={draft.organisation_id && contacts.length === 0 ? 'This organisation has no contacts yet.' : undefined}
-        >
-          <option value="">—</option>
-          {contacts.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-        </Select>
+          onChange={(v) => set('primary_contact_id', v)}
+          newContact={newContact}
+          onNewContact={setNewContact}
+          companyChosen={Boolean(draft.organisation_id || newCompany)}
+        />
 
-        <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
-          <div className="grow">
-            <Select label="Stage" required value={draft.stage_id} onChange={(e) => setStage(e.currentTarget.value)}>
-              {stages.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </Select>
-          </div>
-          <div style={{ width: 120 }}>
-            <Input
-              label="Win %"
-              type="number"
-              value={draft.probability_pct}
-              onChange={(e) => set('probability_pct', e.currentTarget.value)}
-            />
-          </div>
-        </div>
+        <Select label="Stage" required value={draft.stage_id} onChange={(e) => setStage(e.currentTarget.value)}>
+          {stages.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+        </Select>
 
         <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
           <div className="grow">

@@ -156,10 +156,10 @@ function OpportunitiesPage() {
       || a.name.localeCompare(b.name))
 
     const pipeline: SheetSpec = {
-      name: 'Pipeline',
+      name: 'Deals',
       columns: [
         { header: 'Deal', width: 38 },
-        { header: 'Organisation', width: 30 },
+        { header: 'Company', width: 30 },
         { header: 'Stage', width: 22 },
         { header: 'Status', width: 10 },
         { header: 'Capital category', width: 16 },
@@ -217,7 +217,7 @@ function OpportunitiesPage() {
     }
 
     await downloadWorkbook(
-      `${fileSlug('Pipeline', fyText || 'All-years', quarterText.replace(/, /g, '-'), today())}.xlsx`,
+      `${fileSlug('Deals', fyText || 'All-years', quarterText.replace(/, /g, '-'), today())}.xlsx`,
       [pipeline, applied],
     )
     toast.success(`${deals.length} ${deals.length === 1 ? 'deal' : 'deals'} exported.`)
@@ -286,7 +286,7 @@ function OpportunitiesPage() {
     <div className={isBoard ? 'page page--board' : 'page'}>
       <div className="page__head">
         <div>
-          <h1 className="page__title">Pipeline</h1>
+          <h1 className="page__title">Deals</h1>
           {cards === null ? (
             <Skeleton height={14} width={280} />
           ) : (
@@ -301,7 +301,7 @@ function OpportunitiesPage() {
             <button data-active={!isBoard} onClick={() => setFilter('view', 'list')}>List</button>
           </div>
           <ExportMenu size="md" onExcel={exportExcel} />
-          <Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add opportunity</Button>
+          <Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add deal</Button>
         </div>
       </div>
 
@@ -342,7 +342,7 @@ function OpportunitiesPage() {
       {error ? (
         <div className="card">
           <EmptyState
-            title="Could not load the pipeline"
+            title="Could not load deals"
             body={error}
             action={<Button variant="secondary" onClick={() => void load()}>Retry</Button>}
           />
@@ -352,9 +352,9 @@ function OpportunitiesPage() {
       ) : cards.length === 0 ? (
         <div className="card">
           <EmptyState
-            title="No opportunities yet"
-            body="Every deal in the pipeline lives here. Convert a lead, or add one directly."
-            action={<Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add opportunity</Button>}
+            title="No deals yet"
+            body="Every deal lives here. Add one to get started."
+            action={<Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add deal</Button>}
           />
         </div>
       ) : isBoard ? (
@@ -365,7 +365,7 @@ function OpportunitiesPage() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th style={{ width: '180px' }}>Organisation</th>
+                <th style={{ width: '180px' }}>Company</th>
                 <th style={{ width: '170px' }}>Stage</th>
                 <th style={{ width: '130px' }}>Amount</th>
                 <th style={{ width: '120px' }}>Close</th>

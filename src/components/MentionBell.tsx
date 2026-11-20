@@ -85,7 +85,6 @@ export function MentionBell() {
       case 'grant': navigate({ to: '/grants/$id', params: { id: m.parent_id }, search: tab }); break
       case 'organisation': navigate({ to: '/organisations/$id', params: { id: m.parent_id }, search: tab }); break
       case 'contact': navigate({ to: '/contacts', search: { contact: m.parent_id } }); break
-      case 'lead': navigate({ to: '/leads', search: { status: 'all', lead: m.parent_id } }); break
     }
   }
 

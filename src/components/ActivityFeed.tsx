@@ -35,8 +35,8 @@ const ICONS: Record<string, React.ReactNode> = {
 }
 
 /**
- * One polymorphic feed serving organisations, contacts, opportunities, grants
- * and leads, keyed on (parent_type, parent_id).
+ * One polymorphic feed serving organisations, contacts, opportunities and
+ * grants, keyed on (parent_type, parent_id).
  *
  * Logging must stay under ~30 seconds (PRD G4), so the composer is a single
  * always-visible row rather than a modal.

@@ -40,7 +40,7 @@ async function matchOrganisation(name: string | null): Promise<string> {
 /** Whatever the card carried that has no field of its own. */
 function leftoverNotes(f: ContactCardFields, orgLinked: boolean): string {
   const bits: string[] = []
-  if (f.organisation_name && !orgLinked) bits.push(`Organisation on card: ${f.organisation_name}`)
+  if (f.organisation_name && !orgLinked) bits.push(`Company on card: ${f.organisation_name}`)
   if (f.website) bits.push(f.website)
   if (f.address) bits.push(f.address)
   return bits.join('\n')
@@ -185,7 +185,7 @@ function ContactsPage() {
         <div className="card">
           <EmptyState
             title="No contacts found"
-            body="Contacts are the people behind each donor organisation. Adjust the filters or add one."
+            body="Contacts are the people behind each donor company. Adjust the filters or add one."
             action={<Button iconLeft={<Plus size={15} />} onClick={openAdd}>Add contact</Button>}
           />
         </div>
@@ -196,7 +196,7 @@ function ContactsPage() {
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th style={{ width: '220px' }}>Organisation</th>
+                  <th style={{ width: '220px' }}>Company</th>
                   <th>Designation</th>
                   <th style={{ width: '160px' }}>Seniority</th>
                   <th style={{ width: '220px' }}>Email</th>

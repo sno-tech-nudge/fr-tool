@@ -74,16 +74,16 @@ export async function newsStatus(scope: 'all' | 'live', since?: string): Promise
 export function describeRun(r: NewsRun): string {
   if (r.checked === 0) {
     return r.background
-      ? `Your organisations are up to date. ${r.background} others are updating in the background.`
+      ? `Your companies are up to date. ${r.background} others are updating in the background.`
       : 'Already up to date — checked in the last 6 hours.'
   }
   if (r.unreachable && r.unreachable === r.checked) {
     return `Could not search news for any of them: ${r.fetch_error ?? 'the news sources did not answer'}.`
   }
-  const base = `Checked ${r.checked} ${r.checked === 1 ? 'organisation' : 'organisations'}: `
+  const base = `Checked ${r.checked} ${r.checked === 1 ? 'company' : 'companies'}: `
     + `${r.found} new ${r.found === 1 ? 'headline' : 'headlines'}, ${r.kept} worth keeping.`
   const blocked = r.unreachable ? ` ${r.unreachable} could not be searched and will be retried.` : ''
-  const bg = r.background ? ` ${r.background} other organisations are updating in the background.` : ''
+  const bg = r.background ? ` ${r.background} other companies are updating in the background.` : ''
   return base + blocked + bg
 }
 

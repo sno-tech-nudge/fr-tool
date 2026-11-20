@@ -65,8 +65,8 @@ function OrganisationsPage() {
   return (
     <div className="page">
       <div className="page__head">
-        <h1 className="page__title">Organisations</h1>
-        <Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add organisation</Button>
+        <h1 className="page__title">Companies</h1>
+        <Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add company</Button>
       </div>
 
       <div className="filterbar">
@@ -92,7 +92,7 @@ function OrganisationsPage() {
       {error ? (
         <div className="card">
           <EmptyState
-            title="Could not load organisations"
+            title="Could not load companies"
             body={error}
             action={<Button variant="secondary" onClick={() => void load()}>Retry</Button>}
           />
@@ -102,9 +102,9 @@ function OrganisationsPage() {
       ) : rows.length === 0 ? (
         <div className="card">
           <EmptyState
-            title="No organisations found"
+            title="No companies found"
             body="Every donor, corporate and foundation lives here. Adjust the filters or add the first one."
-            action={<Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add organisation</Button>}
+            action={<Button iconLeft={<Plus size={15} />} onClick={() => setFormOpen(true)}>Add company</Button>}
           />
         </div>
       ) : (

@@ -408,7 +408,7 @@ export function LeadershipDashboard({ filters, exportRef }: { filters: Dashboard
           title="Open pipeline by program"
           subtitle={programCoverage}
           data={data?.byProgram ?? null}
-          emptyBody="No open deals have a program attached. Programs are set on an opportunity's Programs tab."
+          emptyBody="No open deals have a program attached. Programs are set on a deal's Programs tab."
         >
           <HBar data={data?.byProgram ?? []} valueLabel="open" />
         </ChartCard>
@@ -467,7 +467,7 @@ export function LeadershipDashboard({ filters, exportRef }: { filters: Dashboard
       </div>
 
       <section className="card stack">
-        <div className="tn-micro">Largest open opportunities</div>
+        <div className="tn-micro">Largest open deals</div>
         {!data ? (
           <TableSkeleton rows={5} cols={5} />
         ) : data.top.length === 0 ? (

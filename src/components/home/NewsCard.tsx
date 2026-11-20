@@ -82,7 +82,7 @@ export function NewsCard() {
       action={
         <div className="row" style={{ gap: 'var(--space-3)' }}>
           <div className="newssearch">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search by organisation" />
+            <SearchInput value={search} onChange={setSearch} placeholder="Search by company" />
           </div>
           <Button size="sm" variant="ghost" iconLeft={<RefreshCw size={14} />} onClick={() => void refresh()} disabled={busy}>
             {busy ? 'Fetching…' : 'Refresh'}
@@ -103,12 +103,12 @@ export function NewsCard() {
           {term ? (
             <EmptyState
               title={`No news stored for “${term}”`}
-              body="Only organisations already fetched have news. Open the organisation and use Refresh on its News tab to fetch it."
+              body="Only companies already fetched have news. Open the company and use Refresh on its News tab to fetch it."
             />
           ) : (
             <EmptyState
               title="No news yet"
-              body="Press Refresh to check the organisations on your deals. Only news useful for fundraising is kept."
+              body="Press Refresh to check the companies on your deals. Only news useful for fundraising is kept."
             />
           )}
         </div>

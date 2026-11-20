@@ -79,8 +79,9 @@ export const PICKLIST_SPECS: PicklistSpec[] = [
   {
     slug: 'programs',
     table: 'fr_programs',
-    tab: 'Programs',
-    title: 'Programs',
+    // Called Products in the app, as in Zoho; the table and code keep 'program'.
+    tab: 'Products',
+    title: 'Products',
     description: 'EUP is the legacy name for EIP — never add an EUP row, map it to EIP.',
     orderBy: [{ column: 'sort_order' }],
     deleteProtected: true,
@@ -103,13 +104,13 @@ export const PICKLIST_SPECS: PicklistSpec[] = [
   {
     slug: 'projects',
     table: 'fr_projects',
-    tab: 'Projects',
-    title: 'Projects',
-    description: 'Sub-projects under a program. Codes are resolution keys and must be unique within their program.',
+    tab: 'Sub-products',
+    title: 'Sub-products',
+    description: 'Sub-products under a product. Codes are resolution keys and must be unique within their product.',
     orderBy: [{ column: 'code' }],
     fields: [
       {
-        key: 'program_id', label: 'Program', type: 'fk', required: true,
+        key: 'program_id', label: 'Product', type: 'fk', required: true,
         fk: { table: 'fr_programs', valueKey: 'id', labelKeys: ['code', 'name'] },
       },
       { key: 'code', label: 'Code', type: 'text', required: true, immutable: true },
@@ -187,24 +188,11 @@ export const PICKLIST_SPECS: PicklistSpec[] = [
     ],
   },
   {
-    slug: 'lead-sources',
-    table: 'fr_lead_sources',
-    tab: 'Lead sources',
-    title: 'Lead sources',
-    orderBy: [{ column: 'sort_order' }],
-    fields: [
-      SORT,
-      { key: 'key', label: 'Key', type: 'text', required: true, immutable: true },
-      { key: 'label', label: 'Label', type: 'text', required: true },
-      ACTIVE,
-    ],
-  },
-  {
     slug: 'loss-reasons',
     table: 'fr_loss_reasons',
     tab: 'Loss reasons',
     title: 'Loss reasons',
-    description: 'A loss reason is mandatory when an opportunity moves to Closed Lost.',
+    description: 'A loss reason is mandatory when a deal moves to Closed Lost.',
     orderBy: [{ column: 'sort_order' }],
     fields: [
       SORT,

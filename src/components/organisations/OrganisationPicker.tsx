@@ -1,25 +1,32 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Search, X } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { Button } from '../ui'
 
 type Hit = { id: string; name: string; donor_type: string | null }
 
 /**
- * Typeahead organisation selector.
+ * Typeahead company selector.
  *
  * A plain <select> is not an option here — there can be hundreds of
- * organisations and PostgREST caps reads at 1,000 rows, so this queries on
+ * companies and PostgREST caps reads at 1,000 rows, so this queries on
  * demand and caps each search at 20 hits.
+ *
+ * With `onNew`, a name that matches no company can be kept as a new one: the
+ * picker shows it as chosen, and the caller creates it when its form saves.
  */
 export function OrganisationPicker({
-  value, onChange, label = 'Organisation', help, required = false,
+  value, onChange, label = 'Company', help, required = false, newName = null, onNew,
 }: {
   value: string
   onChange: (organisationId: string) => void
   label?: string
   help?: string
   required?: boolean
+  /** A new company's name, chosen but not yet saved. */
+  newName?: string | null
+  /** Offer "Add new company" for unmatched names; null clears the new name. */
+  onNew?: (name: string | null) => void
 }) {
   const fieldId = useId()
   const [selected, setSelected] = useState<Hit | null>(null)
@@ -73,7 +80,17 @@ export function OrganisationPicker({
 
   function pick(hit: Hit) {
     setSelected(hit)
+    onNew?.(null)
     onChange(hit.id)
+    setOpen(false)
+    setTerm('')
+  }
+
+  function pickNew() {
+    const name = term.trim()
+    setSelected(null)
+    onChange('')
+    onNew?.(name)
     setOpen(false)
     setTerm('')
   }
@@ -81,8 +98,14 @@ export function OrganisationPicker({
   function clear() {
     setSelected(null)
     onChange('')
+    onNew?.(null)
     setTerm('')
   }
+
+  const typed = term.trim()
+  // Offer a new company only when nothing already carries that exact name.
+  const exact = hits.some((h) => h.name.trim().toLowerCase() === typed.toLowerCase())
+  const shown = selected?.name ?? newName
 
   return (
     <div className="field" ref={boxRef} style={{ position: 'relative' }}>
@@ -90,9 +113,12 @@ export function OrganisationPicker({
         {label}{required ? <span className="field__req"> *</span> : null}
       </label>
 
-      {selected && !open ? (
+      {shown && !open ? (
         <div className="row" style={{ gap: 'var(--space-2)' }}>
-          <span className="grow" style={{ fontSize: 'var(--text-sm)' }}>{selected.name}</span>
+          <span className="grow" style={{ fontSize: 'var(--text-sm)' }}>
+            {shown}
+            {!selected && newName ? <span className="faint"> · new company</span> : null}
+          </span>
           <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Change</Button>
           <Button size="sm" variant="ghost" aria-label="Clear" onClick={clear}><X size={14} /></Button>
         </div>
@@ -104,23 +130,25 @@ export function OrganisationPicker({
               id={fieldId}
               className="searchbox__input"
               value={term}
-              placeholder="Search organisations"
+              placeholder="Search companies"
               onFocus={() => setOpen(true)}
               onChange={(e) => { setTerm(e.currentTarget.value); setOpen(true) }}
             />
           </div>
 
-          {open && term.trim().length >= 2 ? (
+          {open && typed.length >= 2 ? (
             <div className="picker__menu">
-              {hits.length === 0 ? (
-                <p className="picker__empty">No matches</p>
-              ) : (
-                hits.map((h) => (
-                  <button key={h.id} type="button" className="picker__item" onClick={() => pick(h)}>
-                    {h.name}
-                  </button>
-                ))
-              )}
+              {hits.map((h) => (
+                <button key={h.id} type="button" className="picker__item" onClick={() => pick(h)}>
+                  {h.name}
+                </button>
+              ))}
+              {onNew && !exact ? (
+                <button type="button" className="picker__item picker__new" onClick={pickNew}>
+                  <Plus size={13} aria-hidden="true" /> Add new company “{typed}”
+                </button>
+              ) : null}
+              {hits.length === 0 && !onNew ? <p className="picker__empty">No matches</p> : null}
             </div>
           ) : null}
         </>

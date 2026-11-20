@@ -30,7 +30,7 @@ const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'allocations', label: 'Allocations' },
   { key: 'money', label: 'Tranches & money' },
-  { key: 'compliance', label: 'Compliance' },
+  { key: 'compliance', label: 'Reports' },
   { key: 'activity', label: 'Activity' },
 ]
 

@@ -62,7 +62,7 @@ export function AllocationsTab({
   useEffect(() => { void load() }, [load])
 
   async function add() {
-    if (!programId) { toast.error('Pick a program.'); return }
+    if (!programId) { toast.error('Pick a product.'); return }
     if (!amount) { toast.error('Enter an amount.'); return }
 
     // The table's unique constraint treats a NULL project_id as distinct, so
@@ -72,7 +72,7 @@ export function AllocationsTab({
       && (r.project_id ?? '') === projectId
       && (r.fiscal_year ?? '') === fy)
     if (clash) {
-      toast.error('That program, project and year is already allocated.')
+      toast.error('That product, sub-product and year is already allocated.')
       return
     }
 
@@ -120,7 +120,7 @@ export function AllocationsTab({
         <div className="tn-micro">Add an allocation</div>
         <div className="row" style={{ gap: 'var(--space-3)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <Select
-            label="Program"
+            label="Product"
             value={programId}
             onChange={(e) => { setProgramId(e.currentTarget.value); setProjectId('') }}
           >
@@ -128,7 +128,7 @@ export function AllocationsTab({
             {programs.map((p) => <option key={p.id} value={p.id}>{p.code} · {p.name}</option>)}
           </Select>
           <Select
-            label="Project"
+            label="Sub-product"
             value={projectId}
             onChange={(e) => setProjectId(e.currentTarget.value)}
             disabled={!programId}
@@ -163,7 +163,7 @@ export function AllocationsTab({
         <div className="card">
           <EmptyState
             title="Nothing allocated yet"
-            body="Split the grant across the programs and years it funds, so reporting can roll up by program."
+            body="Split the grant across the products and years it funds, so reporting can roll up by product."
           />
         </div>
       ) : (
@@ -172,8 +172,8 @@ export function AllocationsTab({
             <table className="table">
               <thead>
                 <tr>
-                  <th>Program</th>
-                  <th style={{ width: '120px' }}>Project</th>
+                  <th>Product</th>
+                  <th style={{ width: '120px' }}>Sub-product</th>
                   <th style={{ width: '140px' }}>Fiscal year</th>
                   <th style={{ width: '150px' }}>Amount</th>
                   <th style={{ width: '140px' }}>Geography</th>

@@ -226,10 +226,10 @@ function GrantsList({ views }: { views: React.ReactNode }) {
         <div className="card">
           <EmptyState
             title="No grants yet"
-            body="A grant is created when an opportunity is won. Move a deal to Closed won to start one."
+            body="A grant is created when a deal is won. Move a deal to Closed won to start one."
             action={
               <Button variant="secondary" onClick={() => navigate({ to: '/opportunities' })}>
-                Go to pipeline
+                Go to deals
               </Button>
             }
           />

@@ -149,7 +149,7 @@ export function OrganisationForm({
 
     setBusy(false)
     if (res.error) { toast.error(res.error.message); return }
-    toast.success(isNew ? 'Organisation added.' : 'Saved.')
+    toast.success(isNew ? 'Company added.' : 'Saved.')
     void notifyMentions({
       before: organisation?.notes, after: draft.notes, people,
       parentType: 'organisation', parentId: (res.data as Organisation).id, selfId: access.employeeId,
@@ -161,7 +161,7 @@ export function OrganisationForm({
   return (
     <Drawer
       open={open}
-      title={organisation ? 'Edit organisation' : 'Add organisation'}
+      title={organisation ? 'Edit company' : 'Add company'}
       onClose={onClose}
       width={520}
       footer={

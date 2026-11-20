@@ -150,7 +150,7 @@ function moneySheets(
       name: 'Collection by grant',
       columns: [
         { header: 'Agreement', width: 40 },
-        { header: 'Organisation', width: 30 },
+        { header: 'Company', width: 30 },
         { header: 'Category', width: 16 },
         { header: 'FCRA', width: 10 },
         { header: 'Status', width: 12 },
@@ -547,7 +547,7 @@ export function MoneyDashboard({ filters, exportRef }: { filters: DashboardFilte
         ) : collection.length === 0 ? (
           <EmptyState
             title="No grants yet"
-            body="Grants are created when an opportunity is won, and their money appears here."
+            body="Grants are created when a deal is won, and their money appears here."
           />
         ) : (
           <div className="tablewrap tablescroll">

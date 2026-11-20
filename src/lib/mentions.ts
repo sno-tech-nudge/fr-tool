@@ -66,7 +66,7 @@ export function mentionedIds(text: string | null | undefined, people: FrPerson[]
   return people.filter((p) => found.has(p.id)).map((p) => p.id)
 }
 
-export type MentionTarget = 'opportunity' | 'organisation' | 'grant' | 'contact' | 'lead'
+export type MentionTarget = 'opportunity' | 'organisation' | 'grant' | 'contact'
 
 /**
  * Notifies people newly tagged in a saved note — tagged in `after` but not in

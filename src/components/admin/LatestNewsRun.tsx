@@ -44,7 +44,7 @@ export function LatestNewsRun() {
     try {
       const r = await startAllNews()
       if (!r.started || r.remaining === 0) {
-        finish('Already up to date — every organisation was checked in the last 6 hours.', true)
+        finish('Already up to date — every company was checked in the last 6 hours.', true)
         return
       }
       let last = { remaining: r.remaining, at: Date.now() }
@@ -55,7 +55,7 @@ export function LatestNewsRun() {
           const s = await newsStatus('all', since)
           setProgress({ start: r.remaining, remaining: s.remaining, kept: s.kept })
           if (s.remaining === 0) {
-            finish(`Done: ${r.remaining} organisations checked, ${s.kept} headlines worth keeping.`, true)
+            finish(`Done: ${r.remaining} companies checked, ${s.kept} headlines worth keeping.`, true)
             return
           }
           if (s.remaining < last.remaining) last = { remaining: s.remaining, at: Date.now() }
@@ -78,7 +78,7 @@ export function LatestNewsRun() {
   return (
     <section className="card stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <div className="tn-micro">News for every organisation</div>
+        <div className="tn-micro">News for every company</div>
         <Button variant="secondary" iconLeft={<RefreshCw size={14} />} onClick={() => void start()} disabled={busy}>
           {busy ? 'Fetching…' : 'Get latest news'}
         </Button>
@@ -93,7 +93,7 @@ export function LatestNewsRun() {
           <span className="muted tn-num" style={{ fontSize: 'var(--text-sm)' }}>
             {busy
               ? progress
-                ? `${done} of ${progress.start} organisations · ${progress.kept} worth keeping · carries on if you leave this page`
+                ? `${done} of ${progress.start} companies · ${progress.kept} worth keeping · carries on if you leave this page`
                 : 'Starting…'
               : note}
           </span>

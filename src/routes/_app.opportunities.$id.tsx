@@ -136,10 +136,10 @@ function OpportunityDetail() {
   if (error || !opp) {
     return (
       <div className="page">
-        <Link to="/opportunities" className="backlink"><ArrowLeft size={14} /> Pipeline</Link>
+        <Link to="/opportunities" className="backlink"><ArrowLeft size={14} /> Deals</Link>
         <div className="card">
           <EmptyState
-            title={error === 'not-found' ? 'Opportunity not found' : 'Could not load this opportunity'}
+            title={error === 'not-found' ? 'Deal not found' : 'Could not load this deal'}
             body={
               error === 'not-found'
                 ? 'It may have been deleted, or it is confidential and owned by someone else.'
@@ -157,7 +157,7 @@ function OpportunityDetail() {
 
   return (
     <div className="page">
-      <Link to="/opportunities" className="backlink"><ArrowLeft size={14} /> Pipeline</Link>
+      <Link to="/opportunities" className="backlink"><ArrowLeft size={14} /> Deals</Link>
 
       <header className="rechead">
         <div className="rechead__top">
@@ -212,7 +212,7 @@ function OpportunityDetail() {
         </div>
       ) : null}
 
-      <nav className="tabs" aria-label="Opportunity sections">
+      <nav className="tabs" aria-label="Deal sections">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -354,7 +354,7 @@ function ProgramsTab({ opportunityId }: { opportunityId: string }) {
     if (error) {
       toast.error(
         error.message.includes('duplicate key')
-          ? 'That program is already linked to this opportunity.'
+          ? 'That program is already linked to this deal.'
           : error.message,
       )
       return

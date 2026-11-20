@@ -16,7 +16,6 @@ import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppContactsRouteImport } from './routes/_app.contacts'
 import { Route as AppDashboardsRouteImport } from './routes/_app.dashboards'
 import { Route as AppGrantsRouteImport } from './routes/_app.grants'
-import { Route as AppLeadsRouteImport } from './routes/_app.leads'
 import { Route as AppOpportunitiesRouteImport } from './routes/_app.opportunities'
 import { Route as AppOrganisationsRouteImport } from './routes/_app.organisations'
 import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
@@ -65,11 +64,6 @@ const AppDashboardsRoute = AppDashboardsRouteImport.update({
 const AppGrantsRoute = AppGrantsRouteImport.update({
   id: '/grants',
   path: '/grants',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLeadsRoute = AppLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOpportunitiesRoute = AppOpportunitiesRouteImport.update({
@@ -155,7 +149,6 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof AppContactsRoute
   '/dashboards': typeof AppDashboardsRoute
   '/grants': typeof AppGrantsRouteWithChildren
-  '/leads': typeof AppLeadsRoute
   '/opportunities': typeof AppOpportunitiesRouteWithChildren
   '/organisations': typeof AppOrganisationsRouteWithChildren
   '/admin/$slug': typeof AppAdminSlugRoute
@@ -176,7 +169,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/contacts': typeof AppContactsRoute
   '/dashboards': typeof AppDashboardsRoute
-  '/leads': typeof AppLeadsRoute
   '/': typeof AppIndexRoute
   '/admin/$slug': typeof AppAdminSlugRoute
   '/admin/feedback': typeof AppAdminFeedbackRoute
@@ -200,7 +192,6 @@ export interface FileRoutesById {
   '/_app/contacts': typeof AppContactsRoute
   '/_app/dashboards': typeof AppDashboardsRoute
   '/_app/grants': typeof AppGrantsRouteWithChildren
-  '/_app/leads': typeof AppLeadsRoute
   '/_app/opportunities': typeof AppOpportunitiesRouteWithChildren
   '/_app/organisations': typeof AppOrganisationsRouteWithChildren
   '/_app/': typeof AppIndexRoute
@@ -227,7 +218,6 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/dashboards'
     | '/grants'
-    | '/leads'
     | '/opportunities'
     | '/organisations'
     | '/admin/$slug'
@@ -248,7 +238,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/contacts'
     | '/dashboards'
-    | '/leads'
     | '/'
     | '/admin/$slug'
     | '/admin/feedback'
@@ -271,7 +260,6 @@ export interface FileRouteTypes {
     | '/_app/contacts'
     | '/_app/dashboards'
     | '/_app/grants'
-    | '/_app/leads'
     | '/_app/opportunities'
     | '/_app/organisations'
     | '/_app/'
@@ -344,13 +332,6 @@ declare module '@tanstack/react-router' {
       path: '/grants'
       fullPath: '/grants'
       preLoaderRoute: typeof AppGrantsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/leads': {
-      id: '/_app/leads'
-      path: '/leads'
-      fullPath: '/leads'
-      preLoaderRoute: typeof AppLeadsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/opportunities': {
@@ -530,7 +511,6 @@ interface AppRouteChildren {
   AppContactsRoute: typeof AppContactsRoute
   AppDashboardsRoute: typeof AppDashboardsRoute
   AppGrantsRoute: typeof AppGrantsRouteWithChildren
-  AppLeadsRoute: typeof AppLeadsRoute
   AppOpportunitiesRoute: typeof AppOpportunitiesRouteWithChildren
   AppOrganisationsRoute: typeof AppOrganisationsRouteWithChildren
   AppIndexRoute: typeof AppIndexRoute
@@ -541,7 +521,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppContactsRoute: AppContactsRoute,
   AppDashboardsRoute: AppDashboardsRoute,
   AppGrantsRoute: AppGrantsRouteWithChildren,
-  AppLeadsRoute: AppLeadsRoute,
   AppOpportunitiesRoute: AppOpportunitiesRouteWithChildren,
   AppOrganisationsRoute: AppOrganisationsRouteWithChildren,
   AppIndexRoute: AppIndexRoute,

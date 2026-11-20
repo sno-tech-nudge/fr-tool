@@ -63,7 +63,7 @@ export function OrgNewsTab({ organisationId }: { organisationId: string }) {
         <EmptyState title="News is not set up yet" body={`${error} — the news tables may not exist yet.`} />
       ) : items.length === 0 ? (
         <EmptyState
-          title="No news kept for this organisation"
+          title="No news kept for this company"
           body="Only news useful for fundraising is kept — CSR budgets, focus areas, grants, growth."
         />
       ) : (

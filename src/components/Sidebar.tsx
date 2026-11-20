@@ -1,7 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Building2, Contact, Home, KanbanSquare, LineChart, LogOut, PanelLeft, PanelLeftClose,
-  Settings, Sparkles, UserPlus, Wallet,
+  Settings, Sparkles, Wallet,
 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { FeedbackButton } from './FeedbackButton'
@@ -18,10 +18,9 @@ type NavItem = {
 
 const PRIMARY: NavItem[] = [
   { to: '/', label: 'Home', icon: <Home size={16} /> },
-  { to: '/leads', label: 'Leads', icon: <UserPlus size={16} /> },
-  { to: '/organisations', label: 'Organisations', icon: <Building2 size={16} /> },
+  { to: '/organisations', label: 'Companies', icon: <Building2 size={16} /> },
   { to: '/contacts', label: 'Contacts', icon: <Contact size={16} /> },
-  { to: '/opportunities', label: 'Pipeline', icon: <KanbanSquare size={16} /> },
+  { to: '/opportunities', label: 'Deals', icon: <KanbanSquare size={16} /> },
   { to: '/grants', label: 'Grants', icon: <Wallet size={16} /> },
   { to: '/dashboards', label: 'Dashboards', icon: <LineChart size={16} /> },
   { label: 'Explorer', icon: <Sparkles size={16} />, phase: 6 },

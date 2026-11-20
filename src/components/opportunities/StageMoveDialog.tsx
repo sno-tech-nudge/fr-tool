@@ -130,7 +130,7 @@ export function StageMoveDialog({
       return
     }
     if (requirement === 'next_step' && !nextStep.trim()) {
-      setError('An open opportunity needs a next step.')
+      setError('An open deal needs a next step.')
       return
     }
     onConfirm({

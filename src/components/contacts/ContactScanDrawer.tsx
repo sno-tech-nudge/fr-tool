@@ -17,6 +17,30 @@ function hasCamera(): boolean {
 }
 
 /**
+ * Phone photos run to several MB; a card only needs enough pixels to read the
+ * small print. Large JPEG/PNG/WebP images are scaled to 2000px on the long side
+ * before upload, which is far quicker on mobile data. Anything the browser
+ * cannot decode (HEIC on some phones) goes up as it is.
+ */
+async function shrink(file: File): Promise<File> {
+  if (file.size < 1_500_000 || !/^image\/(jpeg|png|webp)$/.test(file.type)) return file
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.85))
+    if (!blob || blob.size >= file.size) return file
+    return new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' })
+  } catch {
+    return file
+  }
+}
+
+/**
  * Picks a photo of a business card, reads it, and hands the fields to the
  * contact form for the person to check before saving.
  *
@@ -51,8 +75,12 @@ export function ContactScanDrawer({
 
   useEffect(() => { if (!open) { setFile(null); setBusy(false) } }, [open])
 
-  function accept(picked: File | undefined) {
-    if (!picked) return
+  async function accept(input: HTMLInputElement | null, dropped?: File) {
+    const original = dropped ?? input?.files?.[0]
+    // Cleared so picking the same photo again still fires a change.
+    if (input) input.value = ''
+    if (!original) return
+    const picked = await shrink(original)
     if (!picked.type.startsWith('image/')) {
       toast.error('That is not an image. Pick a photo or a scan of the card.')
       return
@@ -125,25 +153,23 @@ export function ContactScanDrawer({
             onDrop={(e) => {
               e.preventDefault()
               setDragging(false)
-              accept(e.dataTransfer.files?.[0])
+              void accept(null, e.dataTransfer.files?.[0])
             }}
           >
             <ImageUp size={22} />
-            <p className="dropzone__title">Drop a photo of the card here</p>
-            <div className="row" style={{ gap: 'var(--space-3)' }}>
-              <Button variant="secondary" size="sm" onClick={() => pickRef.current?.click()}>
-                Choose image
-              </Button>
+            {/* Phones get the camera first; computers only upload. */}
+            <p className="dropzone__title">
+              {hasCamera() ? 'Photograph the card, or pick a photo from your phone' : 'Drop a photo of the card here'}
+            </p>
+            <div className="row" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
               {hasCamera() ? (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  iconLeft={<Camera size={14} />}
-                  onClick={() => cameraRef.current?.click()}
-                >
+                <Button size="sm" iconLeft={<Camera size={14} />} onClick={() => cameraRef.current?.click()}>
                   Take a photo
                 </Button>
               ) : null}
+              <Button variant="secondary" size="sm" onClick={() => pickRef.current?.click()}>
+                Upload from device
+              </Button>
             </div>
           </div>
         )}
@@ -153,7 +179,7 @@ export function ContactScanDrawer({
           type="file"
           accept="image/*"
           hidden
-          onChange={(e) => accept(e.currentTarget.files?.[0])}
+          onChange={(e) => void accept(e.currentTarget)}
         />
         {/* capture= opens the camera directly on a phone; desktop ignores it. */}
         <input
@@ -162,7 +188,7 @@ export function ContactScanDrawer({
           accept="image/*"
           capture="environment"
           hidden
-          onChange={(e) => accept(e.currentTarget.files?.[0])}
+          onChange={(e) => void accept(e.currentTarget)}
         />
       </div>
     </Drawer>

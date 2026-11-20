@@ -1,7 +1,7 @@
 /**
  * Option lists for columns that are plain CHECK-constrained text rather than
  * their own picklist table. Anything with an fr_* table behind it (stages,
- * programs, lead sources, loss reasons, bank accounts…) is loaded from the DB
+ * programs, loss reasons, bank accounts…) is loaded from the DB
  * instead, so an admin can change it without a deploy.
  */
 
@@ -36,21 +36,6 @@ export const SENIORITIES: Option[] = [
   { value: 'other', label: 'Other' },
 ]
 
-export const LEAD_STATUSES: Option[] = [
-  { value: 'new', label: 'New' },
-  { value: 'assigned', label: 'Assigned' },
-  { value: 'qualified_converted', label: 'Converted' },
-  { value: 'rejected', label: 'Rejected' },
-]
-
-/** IA 3.1 — required when a lead is rejected. */
-export const LEAD_REJECTION_REASONS: Option[] = [
-  { value: 'not_a_fit', label: 'Not a fit' },
-  { value: 'duplicate', label: 'Duplicate' },
-  { value: 'insufficient_info', label: 'Insufficient info' },
-  { value: 'other', label: 'Other' },
-]
-
 export const ACTIVITY_TYPES: Option[] = [
   { value: 'meeting', label: 'Meeting' },
   { value: 'call', label: 'Call' },
@@ -59,7 +44,7 @@ export const ACTIVITY_TYPES: Option[] = [
   { value: 'task', label: 'Task' },
 ]
 
-export type ActivityParentType = 'organisation' | 'contact' | 'opportunity' | 'grant' | 'lead'
+export type ActivityParentType = 'organisation' | 'contact' | 'opportunity' | 'grant'
 
 export function labelOf(options: Option[], value: string | null | undefined): string {
   if (!value) return '—'

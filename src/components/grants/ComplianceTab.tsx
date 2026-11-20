@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Trash2, Wand2 } from 'lucide-react'
+import { CalendarPlus, Plus, Trash2, Wand2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import {
   Badge, Button, ConfirmDialog, Drawer, EmptyState, Input, Select, Skeleton, useToast,
@@ -145,6 +145,13 @@ export function ComplianceTab({
   const [types, setTypes] = useState<MilestoneType[]>([])
   const [error, setError] = useState<string | null>(null)
   const [genOpen, setGenOpen] = useState(false)
+  // One period with dates chosen by hand, for donors whose windows don't
+  // follow the quarters.
+  const [manualOpen, setManualOpen] = useState(false)
+  const [mName, setMName] = useState('')
+  const [mFrom, setMFrom] = useState('')
+  const [mTo, setMTo] = useState('')
+  const [mDue, setMDue] = useState('')
   const [frequency, setFrequency] = useState('quarterly')
   const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState<Milestone | null>(null)
@@ -176,6 +183,32 @@ export function ComplianceTab({
     })()
     return () => { active = false }
   }, [])
+
+  async function addPeriod() {
+    if (!mFrom || !mTo) { toast.error('Pick the from and to dates.'); return }
+    if (mTo < mFrom) { toast.error('The period cannot end before it starts.'); return }
+    const due = mDue || iso(addDays(new Date(mTo), 30))
+    setBusy(true)
+    // Keyed on its dates, so re-adding a removed period revives it.
+    const { error: err } = await supabase.from('fr_compliance_report_periods').upsert({
+      grant_id: grantId,
+      period_key: `CUSTOM_${mFrom}_${mTo}`,
+      period_label: mName.trim() || `${formatDate(mFrom)} – ${formatDate(mTo)}`,
+      period_start_date: mFrom,
+      period_end_date: mTo,
+      due_date: due,
+      reporting_frequency: 'ad_hoc',
+      overall_status: 'green',
+      deleted_at: null,
+      created_by: access.employeeId,
+    }, { onConflict: 'grant_id,period_key' })
+    setBusy(false)
+    if (err) { toast.error(err.message); return }
+    setManualOpen(false)
+    setMName(''); setMFrom(''); setMTo(''); setMDue('')
+    toast.success('Reporting period added.')
+    void load()
+  }
 
   async function generatePeriods() {
     if (periods && periods.length > 0) { toast.error('Periods already exist for this grant.'); return }
@@ -231,7 +264,7 @@ export function ComplianceTab({
       .eq('id', m.id)
     if (err) { toast.error(err.message); return }
     setMilestones((prev) => (prev ?? []).filter((x) => x.id !== m.id))
-    toast.success('Milestone removed.')
+    toast.success('Report removed.')
     onChanged()
   }
 
@@ -265,7 +298,7 @@ export function ComplianceTab({
             size="sm"
             iconLeft={<Trash2 size={14} />}
             onClick={() => setConfirmDelete(m)}
-            aria-label="Remove milestone"
+            aria-label="Remove report"
           />
         </td>
       </tr>
@@ -285,20 +318,23 @@ export function ComplianceTab({
         >
           Generate periods
         </Button>
+        <Button variant="secondary" size="sm" iconLeft={<CalendarPlus size={14} />} onClick={() => setManualOpen(true)}>
+          Add period
+        </Button>
         <Button size="sm" iconLeft={<Plus size={14} />} onClick={() => setAddOpen(true)}>
-          Add milestone
+          Add report
         </Button>
       </div>
 
       {error ? (
-        <div className="card"><EmptyState title="Could not load compliance" body={error} /></div>
+        <div className="card"><EmptyState title="Could not load reports" body={error} /></div>
       ) : periods === null || milestones === null ? (
         <Skeleton height={140} />
       ) : periods.length === 0 && milestones.length === 0 ? (
         <div className="card">
           <EmptyState
             title="Nothing to report yet"
-            body="Generate the reporting periods for this grant's term, then hang the utilisation certificates and narrative reports off them."
+            body="Generate this grant's reporting periods, or add one with your own dates, then add the reports due in each."
             action={
               <Button iconLeft={<Wand2 size={15} />} onClick={() => setGenOpen(true)}>
                 Generate periods
@@ -344,7 +380,7 @@ export function ComplianceTab({
                     <table className="table">
                       <thead>
                         <tr>
-                          <th>Milestone</th>
+                          <th>Report</th>
                           <th style={{ width: '150px' }}>Due</th>
                           <th style={{ width: '130px' }}>Status</th>
                           <th style={{ width: '150px' }}>Owner</th>
@@ -355,7 +391,7 @@ export function ComplianceTab({
                     </table>
                   </div>
                 ) : (
-                  <p className="faint pcard__empty">No milestones yet.</p>
+                  <p className="faint pcard__empty">No reports yet.</p>
                 )}
               </div>
             )
@@ -368,7 +404,7 @@ export function ComplianceTab({
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Milestone</th>
+                      <th>Report</th>
                       <th style={{ width: '150px' }}>Due</th>
                       <th style={{ width: '130px' }}>Status</th>
                       <th style={{ width: '150px' }}>Owner</th>
@@ -421,10 +457,48 @@ export function ComplianceTab({
         </div>
       </Drawer>
 
+      <Drawer
+        open={manualOpen}
+        title="Add a reporting period"
+        onClose={() => setManualOpen(false)}
+        width={420}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setManualOpen(false)} disabled={busy}>Cancel</Button>
+            <Button onClick={() => void addPeriod()} disabled={busy}>{busy ? 'Adding…' : 'Add period'}</Button>
+          </>
+        }
+      >
+        <div className="stack">
+          <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
+            <div className="grow">
+              <Input label="From" type="date" required value={mFrom} onChange={(e) => setMFrom(e.currentTarget.value)} />
+            </div>
+            <div className="grow">
+              <Input label="To" type="date" required value={mTo} onChange={(e) => setMTo(e.currentTarget.value)} />
+            </div>
+          </div>
+          <Input
+            label="Due on"
+            type="date"
+            value={mDue}
+            placeholder={mTo ? iso(addDays(new Date(mTo), 30)) : ''}
+            help={mTo && !mDue ? `Blank means 30 days after it ends: ${formatDate(iso(addDays(new Date(mTo), 30)))}` : undefined}
+            onChange={(e) => setMDue(e.currentTarget.value)}
+          />
+          <Input
+            label="Name"
+            value={mName}
+            placeholder={mFrom && mTo ? `${formatDate(mFrom)} – ${formatDate(mTo)}` : 'Year 1 annual report'}
+            onChange={(e) => setMName(e.currentTarget.value)}
+          />
+        </div>
+      </Drawer>
+
       <ConfirmDialog
         open={confirmDeletePeriod !== null}
         title={`Remove ${confirmDeletePeriod?.period_label ?? 'this period'}?`}
-        body="Milestones attached to it are kept — they just stop being bundled under a period."
+        body="Reports in it are kept — they just stop being grouped under a period."
         confirmLabel="Remove"
         destructive
         onCancel={() => setConfirmDeletePeriod(null)}
@@ -433,7 +507,7 @@ export function ComplianceTab({
 
       <ConfirmDialog
         open={confirmDelete !== null}
-        title="Remove this milestone?"
+        title="Remove this report?"
         body="It is soft-deleted, so it stops appearing but the record is kept."
         confirmLabel="Remove"
         destructive
@@ -520,7 +594,7 @@ function MilestoneDrawer({
         .insert({ ...payload, created_by: access.employeeId }).select().single()
     setBusy(false)
     if (res.error) { toast.error(res.error.message); return }
-    toast.success(milestone ? 'Saved.' : 'Milestone added.')
+    toast.success(milestone ? 'Saved.' : 'Report added.')
     void notifyMentions({
       before: milestone?.notes, after: draft.notes, people,
       parentType: 'grant', parentId: grantId, selfId: access.employeeId,
@@ -532,7 +606,7 @@ function MilestoneDrawer({
   return (
     <Drawer
       open={open}
-      title={milestone ? 'Edit milestone' : 'Add milestone'}
+      title={milestone ? 'Edit report' : 'Add report'}
       onClose={onClose}
       width={460}
       footer={

@@ -43,7 +43,7 @@ export const GATE_FIELDS: GateField[] = [
     on: 'organisation',
     type: 'select',
     options: DONOR_TYPES,
-    help: 'Held on the organisation, so setting it here updates the donor record.',
+    help: 'Held on the company, so setting it here updates the donor record.',
   },
   {
     key: 'capital_category',

@@ -25,7 +25,7 @@ type Tab = 'overview' | 'contacts' | 'opportunities' | 'grants' | 'activity' | '
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'contacts', label: 'Contacts' },
-  { key: 'opportunities', label: 'Opportunities' },
+  { key: 'opportunities', label: 'Deals' },
   { key: 'grants', label: 'Grants' },
   { key: 'activity', label: 'Activity' },
   { key: 'news', label: 'News' },
@@ -119,10 +119,10 @@ function OrganisationDetail() {
   if (error || !org) {
     return (
       <div className="page">
-        <Link to="/organisations" className="backlink"><ArrowLeft size={14} /> Organisations</Link>
+        <Link to="/organisations" className="backlink"><ArrowLeft size={14} /> Companies</Link>
         <div className="card">
           <EmptyState
-            title={error === 'not-found' ? 'Organisation not found' : 'Could not load this organisation'}
+            title={error === 'not-found' ? 'Company not found' : 'Could not load this company'}
             body={
               error === 'not-found'
                 ? 'It may have been deleted, or it is confidential and owned by someone else.'
@@ -141,7 +141,7 @@ function OrganisationDetail() {
 
   return (
     <div className="page">
-      <Link to="/organisations" className="backlink"><ArrowLeft size={14} /> Organisations</Link>
+      <Link to="/organisations" className="backlink"><ArrowLeft size={14} /> Companies</Link>
 
       <header className="rechead">
         <div className="rechead__top">
@@ -196,7 +196,7 @@ function OrganisationDetail() {
         </div>
       </header>
 
-      <nav className="tabs" aria-label="Organisation sections">
+      <nav className="tabs" aria-label="Company sections">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -381,18 +381,18 @@ function OrgOpportunities({ organisationId }: { organisationId: string }) {
   const ownerName = (id: string) => employees.find((e) => e.id === id)?.name ?? '—'
 
   if (error) {
-    return <div className="card"><EmptyState title="Could not load opportunities" body={error} /></div>
+    return <div className="card"><EmptyState title="Could not load deals" body={error} /></div>
   }
   if (rows === null) return <TableSkeleton rows={4} cols={6} />
   if (rows.length === 0) {
     return (
       <div className="card">
         <EmptyState
-          title="No opportunities yet"
-          body="Deals with this donor appear here once one is added to the pipeline."
+          title="No deals yet"
+          body="Deals with this donor appear here once one is added."
           action={
             <Button variant="secondary" onClick={() => navigate({ to: '/opportunities' })}>
-              Go to pipeline
+              Go to deals
             </Button>
           }
         />
@@ -504,7 +504,7 @@ function OrgGrants({ organisationId }: { organisationId: string }) {
       <div className="card">
         <EmptyState
           title="No grants yet"
-          body="A grant appears here once one of this donor's opportunities is won."
+          body="A grant appears here once one of this donor's deals is won."
         />
       </div>
     )

@@ -397,7 +397,7 @@ export function WonWizard({
         // The PM owner is recorded on the deal too; the NBD owner stays its owner.
         .update({ won_grant_id: grantId, pm_owner_user_id: ownerId, updated_by: access.employeeId })
         .eq('id', opportunity.id)
-      if (linkErr) problems.push('the link back to the opportunity')
+      if (linkErr) problems.push('the link back to the deal')
 
       if (problems.length > 0) {
         toast.error(`Grant created, but ${problems.join(', ')} could not be saved. Finish it on the grant page.`)

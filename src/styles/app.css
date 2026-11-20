@@ -1904,3 +1904,4 @@ input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; marg
 @media (max-width: 760px) { .remfields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .remfield .input { max-width: 120px; }
 .acctchart__range { color: var(--text-muted); font-weight: var(--weight-regular); }
+.picker__new { display: flex; align-items: center; gap: var(--space-2); color: var(--action); }

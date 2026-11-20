@@ -236,7 +236,7 @@ export function ContactForm({
 
           {lockedOrganisationId ? null : (
             <OrganisationPicker
-              label="Organisation"
+              label="Company"
               value={draft.organisation_id}
               onChange={(v) => set('organisation_id', v)}
             />
@@ -316,7 +316,7 @@ export function ContactForm({
           <DictationTextarea label="Notes" mentions value={draft.notes} onChange={(v) => set('notes', v)} />
 
           <Checkbox
-            label="Primary contact for this organisation"
+            label="Primary contact for this company"
             checked={draft.is_primary}
             onChange={(v) => set('is_primary', v)}
           />
