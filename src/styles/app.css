@@ -186,7 +186,8 @@
   color: var(--ink);
 }
 
-.page { padding: var(--space-6); max-width: var(--container-xl); width: 100%; }
+/* Pages use the whole window width, on every screen size. */
+.page { padding: var(--space-6); width: 100%; }
 .page__head {
   display: flex;
   align-items: flex-start;
