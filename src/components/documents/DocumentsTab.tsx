@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ExternalLink, FileText, FolderOpen } from 'lucide-react'
+import { ExternalLink, FileText, FolderOpen, Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { EmptyState, TableSkeleton, useToast } from '../ui'
+import { Button, EmptyState, TableSkeleton, useToast } from '../ui'
+import { AddDocumentDialog } from './AddDocumentDialog'
 import { documentUrl, readableSize } from '../../lib/documents'
 import { formatDate } from '../../lib/format'
 
@@ -49,6 +50,8 @@ export function DocumentsTab({
   const [rows, setRows] = useState<Doc[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [type, setType] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [reload, setReload] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -65,7 +68,7 @@ export function DocumentsTab({
         setRows((data ?? []) as unknown as Doc[])
       })
     return () => { active = false }
-  }, [opportunityId, organisationId])
+  }, [opportunityId, organisationId, reload])
 
   const types = useMemo(() => [...new Set((rows ?? []).map((d) => d.doc_type))].sort(), [rows])
   const shown = (rows ?? []).filter((d) => !type || d.doc_type === type)
@@ -84,8 +87,11 @@ export function DocumentsTab({
     }
   }
 
-  const links = folderUrl || zohoUrl ? (
+  const links = folderUrl || zohoUrl || opportunityId ? (
     <div className="row" style={{ gap: 'var(--space-2)' }}>
+      {opportunityId ? (
+        <Button size="sm" iconLeft={<Plus size={14} />} onClick={() => setAdding(true)}>Add document</Button>
+      ) : null}
       {folderUrl ? (
         <a className="btn btn--secondary btn--sm" href={folderUrl} target="_blank" rel="noreferrer noopener">
           <FolderOpen size={14} /> Drive folder
@@ -101,6 +107,14 @@ export function DocumentsTab({
 
   return (
     <div className="stack">
+      {opportunityId ? (
+        <AddDocumentDialog
+          open={adding}
+          opportunityId={opportunityId}
+          onClose={() => setAdding(false)}
+          onAdded={() => setReload((n) => n + 1)}
+        />
+      ) : null}
       {links || types.length > 1 ? (
         <div className="row" style={{ justifyContent: 'space-between', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
           {types.length > 1 ? (

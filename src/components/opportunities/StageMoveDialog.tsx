@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Button, Input, Select, Skeleton, Textarea } from '../ui'
 import type { Stage } from '../../hooks/usePipelineStages'
@@ -9,6 +9,7 @@ import type { StageMoveExtras } from './stageMove'
 import { stageMoveRequirement } from './stageMove'
 import { gateFieldsFor, type GateField } from './stageRequirements'
 import { ProposalFileField } from './ProposalFileField'
+import { discardDealDocuments, type DealDocument } from '../../lib/dealDocuments'
 
 type LossReason = { id: string; key: string; label: string }
 type Gate = GateField & { satisfied: boolean }
@@ -47,6 +48,21 @@ export function StageMoveDialog({
 
   const [gates, setGates] = useState<Gate[] | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
+  const [orgId, setOrgId] = useState<string | null>(null)
+  const [legacyLink, setLegacyLink] = useState<string | null>(null)
+  // Hooks stay above the early return below.
+  // Files uploaded in this dialog; a cancelled move takes them back off the deal.
+  const uploaded = useRef<DealDocument[]>([])
+  const cancel = useCallback(() => {
+    const docs = uploaded.current
+    uploaded.current = []
+    void discardDealDocuments(docs)
+    onCancel()
+  }, [onCancel])
+  const setProposalCount = useCallback((n: number) => {
+    setValues((prev) => ({ ...prev, document_url: n > 0 ? String(n) : '' }))
+    if (n > 0) setError(null)
+  }, [])
 
   const requirement = stageMoveRequirement(toStage ?? undefined)
 
@@ -65,8 +81,8 @@ export function StageMoveDialog({
       fr_organisations: { id: string; donor_type: string | null } | null
     }
 
-    // A proposal is a separate record, so its presence is what counts rather
-    // than a column on the deal.
+    // Proposal files sit on the deal's documents; older proposals were saved
+    // as a web link on the proposal record. Either counts.
     const { data: proposals } = await supabase
       .from('fr_proposals')
       .select('document_url')
@@ -75,10 +91,20 @@ export function StageMoveDialog({
       .order('version', { ascending: false })
       .limit(1)
 
+    const { count: proposalFiles } = await supabase
+      .from('fr_documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('opportunity_id', opportunityId)
+      .eq('doc_type', 'Proposal')
+      .is('deleted_at', null)
+    const link = proposals?.[0]?.document_url ?? null
+    setOrgId(row.fr_organisations?.id ?? null)
+    setLegacyLink(link)
+
     const current: Record<string, unknown> = {
       ...row,
       donor_type: row.fr_organisations?.donor_type ?? null,
-      document_url: proposals?.[0]?.document_url ?? null,
+      document_url: (proposalFiles ?? 0) + (link ? 1 : 0) || null,
     }
 
     const found = gateFieldsFor(toStage, stages, current)
@@ -97,6 +123,7 @@ export function StageMoveDialog({
     setNextStepDate('')
     setNote('')
     setError(null)
+    uploaded.current = []
     void loadGates()
   }, [open, loadGates])
 
@@ -113,10 +140,10 @@ export function StageMoveDialog({
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') cancel() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onCancel])
+  }, [open, cancel])
 
   if (!open || !toStage) return null
 
@@ -174,7 +201,18 @@ export function StageMoveDialog({
       )
     }
     if (g.type === 'file') {
-      return <ProposalFileField key={g.key} label={g.label} required value={value} onChange={(v) => set(g.key, v)} />
+      return (
+        <ProposalFileField
+          key={g.key}
+          opportunityId={opportunityId!}
+          organisationId={orgId}
+          legacyLink={legacyLink}
+          label={g.label}
+          required
+          onCountChange={setProposalCount}
+          onUploaded={(d) => { uploaded.current.push(d) }}
+        />
+      )
     }
     if (g.type === 'bank_account') {
       return (
@@ -195,7 +233,7 @@ export function StageMoveDialog({
   }
 
   return (
-    <div className="scrim" role="presentation" onClick={onCancel}>
+    <div className="scrim" role="presentation" onClick={cancel}>
       <div
         className="dialog dialog--tall"
         role="dialog"
@@ -265,7 +303,7 @@ export function StageMoveDialog({
         </div>
 
         <div className="dialog__actions">
-          <Button variant="ghost" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button variant="ghost" onClick={cancel} disabled={busy}>Cancel</Button>
           <Button onClick={confirm} disabled={busy || gates === null}>
             {busy ? 'Moving…' : 'Move'}
           </Button>

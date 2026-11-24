@@ -77,7 +77,7 @@ export function readableSize(bytes: number): string {
 
 /** Returns the storage path, which is what gets stored on the record. */
 export async function uploadDocument(
-  folder: 'contact-cards' | 'contracts' | 'proposals', file: File,
+  folder: 'contact-cards' | 'contracts', file: File,
 ): Promise<string> {
   const path = `${folder}/${crypto.randomUUID()}.${extensionOf(file)}`
   const { error } = await supabase.storage.from(DOCS_BUCKET).upload(path, file, {
