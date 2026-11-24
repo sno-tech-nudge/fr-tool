@@ -11,8 +11,12 @@ import type { ContactCardFields } from '../lib/documents'
 import { SENIORITIES, labelOf } from '../lib/enums'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
+import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
 
-export const Route = createFileRoute('/_app/contacts')({ component: ContactsPage })
+export const Route = createFileRoute('/_app/contacts')({
+  beforeLoad: (opts) => restoreFilters('contacts', '/contacts', opts, ['contact']),
+  component: ContactsPage,
+})
 
 const PAGE_SIZE = 50
 const DEFAULTS = { q: '', seniority: '', individual: '', page: '1' }
@@ -47,6 +51,7 @@ function leftoverNotes(f: ContactCardFields, orgLinked: boolean): string {
 }
 
 function ContactsPage() {
+  useRememberFilters('contacts', ['contact'])
   const { filters, setFilter } = useUrlFilters(DEFAULTS)
 
   const [rows, setRows] = useState<ContactRow[] | null>(null)

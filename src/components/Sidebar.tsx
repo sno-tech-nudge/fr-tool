@@ -44,7 +44,17 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   return (
-    <aside className="sidebar">
+    <aside
+      className="sidebar"
+      // A click on any empty part of the sidebar opens or closes it; links,
+      // buttons and the feedback panel keep their own clicks.
+      onClick={(e) => {
+        const t = e.target as HTMLElement
+        if (t.closest('a, button, input, select, textarea, [role="dialog"], .feedback__panel')) return
+        if (window.getSelection()?.toString()) return
+        onToggle()
+      }}
+    >
       <div className="sidebar__brand">
         <img src="/design-system/logos/thenudge-wordmark-cream.png" alt="The/Nudge" />
         <button

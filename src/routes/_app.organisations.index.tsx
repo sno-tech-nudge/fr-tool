@@ -10,8 +10,12 @@ import { DONOR_TYPES, RELATIONSHIP_STATUSES, labelOf, relationshipTone } from '.
 import { formatMoney } from '../lib/format'
 import { useEmployees } from '../hooks/useEmployees'
 import { useUrlFilters } from '../hooks/useUrlFilters'
+import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
 
-export const Route = createFileRoute('/_app/organisations/')({ component: OrganisationsPage })
+export const Route = createFileRoute('/_app/organisations/')({
+  beforeLoad: (opts) => restoreFilters('companies', '/organisations', opts),
+  component: OrganisationsPage,
+})
 
 const PAGE_SIZE = 50
 const DEFAULTS = { q: '', donor_type: '', relationship_status: '', owner: '', page: '1' }
@@ -22,6 +26,7 @@ const SELECT_COLS =
   'relationship_status, relationship_owner_user_id, confidential, description, notes'
 
 function OrganisationsPage() {
+  useRememberFilters('companies')
   const navigate = useNavigate()
   const { employees } = useEmployees()
   const { filters, setFilter } = useUrlFilters(DEFAULTS)

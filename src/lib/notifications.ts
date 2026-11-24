@@ -83,7 +83,6 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
 export const CHANNELS = [
   { key: 'in_app', label: 'In app' },
   { key: 'email', label: 'Email' },
-  { key: 'slack', label: 'Slack' },
 ] as const
 
 export type Channel = typeof CHANNELS[number]['key']
@@ -92,7 +91,6 @@ export type Channel = typeof CHANNELS[number]['key']
 export const CHANNEL_LIVE: Record<Channel, boolean> = {
   in_app: true,
   email: false,
-  slack: false,
 }
 
 export function severityTone(severity: string | null): 'red' | 'amber' | 'outline' {

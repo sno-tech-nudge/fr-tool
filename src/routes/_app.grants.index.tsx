@@ -18,8 +18,12 @@ import { ANY_OWNER, effectiveOwner, ownerParam, ownerSelectValue } from '../lib/
 import { useEmployees } from '../hooks/useEmployees'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
+import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
 
-export const Route = createFileRoute('/_app/grants/')({ component: GrantsPage })
+export const Route = createFileRoute('/_app/grants/')({
+  beforeLoad: (opts) => restoreFilters('grants', '/grants', opts),
+  component: GrantsPage,
+})
 
 const PAGE_SIZE = 50
 const DEFAULTS = {
@@ -84,6 +88,7 @@ function healthOf(g: GrantRow): 'green' | 'amber' | 'red' {
 const VIEW_DEFAULTS = { view: '' }
 
 function GrantsPage() {
+  useRememberFilters('grants')
   const { filters, setFilter } = useUrlFilters(VIEW_DEFAULTS)
   const receipts = filters.view === 'receipts'
   const views = (

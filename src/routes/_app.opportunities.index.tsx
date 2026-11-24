@@ -22,8 +22,12 @@ import { useEmployees } from '../hooks/useEmployees'
 import { usePipelineStages, type Stage } from '../hooks/usePipelineStages'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
+import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
 
-export const Route = createFileRoute('/_app/opportunities/')({ component: OpportunitiesPage })
+export const Route = createFileRoute('/_app/opportunities/')({
+  beforeLoad: (opts) => restoreFilters('deals', '/opportunities', opts),
+  component: OpportunitiesPage,
+})
 
 const DEFAULTS = {
   view: 'board', q: '', owner: '', capital_category: '', deal_category: '',
@@ -70,6 +74,7 @@ type WonSubject = {
 }
 
 function OpportunitiesPage() {
+  useRememberFilters('deals')
   const toast = useToast()
   const navigate = useNavigate()
   const access = useAccess()

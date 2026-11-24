@@ -74,8 +74,20 @@ export function MentionBell() {
     await supabase.from('fr_notifications').update({ read_at: stamp }).in('id', ids)
   }
 
+  /** Opened = done: it leaves the bell (read and dismissed in one write). */
+  async function clear(m: Mention) {
+    setItems((prev) => prev.filter((x) => x.id !== m.id))
+    const stamp = new Date().toISOString()
+    const { data } = await supabase
+      .from('fr_notifications')
+      .update({ read_at: m.read_at ?? stamp, dismissed_at: stamp })
+      .eq('id', m.id)
+      .select('id')
+    if (!data?.length) void load()
+  }
+
   function go(m: Mention) {
-    void markRead(m.read_at ? [] : [m.id])
+    void clear(m)
     setOpen(false)
     if (!m.parent_id) return
     const fromActivity = m.external_ref?.startsWith('mention:activity') ?? false
@@ -112,7 +124,7 @@ export function MentionBell() {
             ) : null}
           </div>
           {items.length === 0 ? (
-            <p className="bell__empty">No mentions yet.</p>
+            <p className="bell__empty">No new mentions.</p>
           ) : (
             <ul className="bell__list">
               {items.map((m) => (

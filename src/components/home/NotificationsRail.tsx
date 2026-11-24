@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { BellOff, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { Badge, Button, EmptyState, Skeleton } from '../ui'
+import { Badge, Button, ConfirmDialog, EmptyState, Skeleton, useToast } from '../ui'
 import { formatDateTime } from '../../lib/format'
 import { severityTone } from '../../lib/notifications'
 import { useAccess } from '../../lib/accessContext'
@@ -42,14 +42,19 @@ export function NotificationsRail() {
   const access = useAccess()
   const [items, setItems] = useState<Notification[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
+  // All open notifications, not just the 20 shown.
+  const [total, setTotal] = useState(0)
+  const [confirmAll, setConfirmAll] = useState(false)
+  const [clearing, setClearing] = useState(false)
 
   const load = useCallback(async () => {
     if (!access.employeeId) return
     setItems(null)
     setError(null)
-    const { data, error: err } = await supabase
+    const { data, error: err, count } = await supabase
       .from('fr_notifications')
-      .select('id, category, severity, title, body, parent_type, parent_id, created_at, read_at')
+      .select('id, category, severity, title, body, parent_type, parent_id, created_at, read_at', { count: 'exact' })
       .eq('recipient_user_id', access.employeeId)
       // Mentions live in the bell, not here.
       .neq('category', 'mention')
@@ -58,17 +63,43 @@ export function NotificationsRail() {
       .limit(20)
     if (err) { setError(err.message); setItems([]); return }
     setItems((data ?? []) as Notification[])
+    setTotal(count ?? 0)
   }, [access.employeeId])
 
   useEffect(() => { void load() }, [load])
 
   async function dismiss(id: string) {
     setItems((prev) => (prev ?? []).filter((n) => n.id !== id))
-    const { error: err } = await supabase
+    setTotal((t) => Math.max(0, t - 1))
+    // A write that RLS blocks returns no error, just no rows, so read the row
+    // back to know the dismiss really landed.
+    const { data, error: err } = await supabase
       .from('fr_notifications')
       .update({ dismissed_at: new Date().toISOString() })
       .eq('id', id)
-    if (err) void load()
+      .select('id, dismissed_at')
+    if (err || !data?.length || !data[0].dismissed_at) {
+      toast.error(`Could not dismiss: ${err?.message ?? 'the change was not saved'}`)
+      void load()
+    }
+  }
+
+  async function dismissAll() {
+    if (!access.employeeId) return
+    setClearing(true)
+    const { data, error: err } = await supabase
+      .from('fr_notifications')
+      .update({ dismissed_at: new Date().toISOString() })
+      .eq('recipient_user_id', access.employeeId)
+      .neq('category', 'mention')
+      .is('dismissed_at', null)
+      .select('id')
+    setClearing(false)
+    setConfirmAll(false)
+    if (err) { toast.error(`Could not dismiss: ${err.message}`); return }
+    toast.success(`Dismissed ${data?.length ?? 0}`)
+    setItems([])
+    setTotal(0)
   }
 
   async function markAllRead() {
@@ -92,12 +123,25 @@ export function NotificationsRail() {
               Mark read
             </Button>
           ) : null}
+          {total > 0 ? (
+            <Button size="sm" variant="ghost" iconLeft={<BellOff size={14} />} onClick={() => setConfirmAll(true)}>
+              Dismiss all
+            </Button>
+          ) : null}
           <Link to="/admin/notifications" className="celllink" style={{ fontSize: 'var(--text-sm)' }}>
             Notification settings
           </Link>
         </div>
       }
     >
+      <ConfirmDialog
+        open={confirmAll}
+        title={`Dismiss all ${total} notifications?`}
+        confirmLabel="Dismiss all"
+        busy={clearing}
+        onConfirm={() => void dismissAll()}
+        onCancel={() => setConfirmAll(false)}
+      />
       {items === null ? (
         <div className="card stack">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} height={36} />)}
