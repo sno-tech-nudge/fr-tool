@@ -238,6 +238,9 @@
 .btn--primary:hover:not(:disabled) { --_bg: var(--action-hover); --_bd: var(--action-hover); }
 .btn--secondary { --_bg: transparent; --_fg: var(--action); --_bd: var(--action); }
 .btn--secondary:hover:not(:disabled) { --_bg: var(--action); --_fg: var(--action-text); }
+/* A link styled as a button keeps the button's text colour on hover; the
+   design system's global a:hover would otherwise win and hide the label. */
+a.btn:hover { color: var(--_fg); }
 .btn--ghost { --_bg: transparent; --_fg: var(--action); --_bd: transparent; }
 .btn--ghost:hover:not(:disabled) { --_bg: color-mix(in srgb, var(--brown-700) 9%, transparent); }
 .btn--danger { --_bg: var(--rag-red); --_fg: var(--tn-white); --_bd: var(--rag-red); }

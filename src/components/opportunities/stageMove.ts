@@ -96,17 +96,24 @@ export async function moveOpportunityStage({
       .eq('id', moved.organisation_id)
   }
 
-  // The proposal gate records the link if no proposal exists yet; an existing
-  // one is left alone, since the Proposals tab owns versioning.
+  // The proposal gate records the file on a new proposal if none exists yet,
+  // or on the latest one when a different file was uploaded in the dialog.
   const proposalField = extras.fields?.document_url
   if (proposalField?.on === 'proposal' && proposalField.value?.trim()) {
     const { data: existing } = await supabase
       .from('fr_proposals')
-      .select('id')
+      .select('id, document_url')
       .eq('opportunity_id', opportunity.id)
       .is('deleted_at', null)
+      .order('version', { ascending: false })
       .limit(1)
-    if (!existing || existing.length === 0) {
+    const latest = existing?.[0] as { id: string; document_url: string | null } | undefined
+    if (latest && latest.document_url !== proposalField.value.trim()) {
+      await supabase.from('fr_proposals')
+        .update({ document_url: proposalField.value.trim() })
+        .eq('id', latest.id)
+    }
+    if (!latest) {
       await supabase.from('fr_proposals').insert({
         opportunity_id: opportunity.id,
         version: 1,

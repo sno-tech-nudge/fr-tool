@@ -8,6 +8,7 @@ import { useBankAccounts } from '../../hooks/useBankAccounts'
 import type { StageMoveExtras } from './stageMove'
 import { stageMoveRequirement } from './stageMove'
 import { gateFieldsFor, type GateField } from './stageRequirements'
+import { ProposalFileField } from './ProposalFileField'
 
 type LossReason = { id: string; key: string; label: string }
 type Gate = GateField & { satisfied: boolean }
@@ -71,6 +72,7 @@ export function StageMoveDialog({
       .select('document_url')
       .eq('opportunity_id', opportunityId)
       .is('deleted_at', null)
+      .order('version', { ascending: false })
       .limit(1)
 
     const current: Record<string, unknown> = {
@@ -170,6 +172,9 @@ export function StageMoveDialog({
           {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
         </Select>
       )
+    }
+    if (g.type === 'file') {
+      return <ProposalFileField key={g.key} label={g.label} required value={value} onChange={(v) => set(g.key, v)} />
     }
     if (g.type === 'bank_account') {
       return (

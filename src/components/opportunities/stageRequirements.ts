@@ -22,7 +22,7 @@ export type GateField = {
   /** Stage key from which this is mandatory. */
   requiredAt: string
   on: GateTarget
-  type: 'text' | 'number' | 'date' | 'select' | 'employee' | 'bank_account'
+  type: 'text' | 'number' | 'date' | 'select' | 'employee' | 'bank_account' | 'file'
   options?: Option[]
   help?: string
 }
@@ -43,7 +43,6 @@ export const GATE_FIELDS: GateField[] = [
     on: 'organisation',
     type: 'select',
     options: DONOR_TYPES,
-    help: 'Held on the company, so setting it here updates the donor record.',
   },
   {
     key: 'capital_category',
@@ -91,11 +90,10 @@ export const GATE_FIELDS: GateField[] = [
   },
   {
     key: 'document_url',
-    label: 'Proposal link',
+    label: 'Proposal',
     requiredAt: 'proposal_sent',
     on: 'proposal',
-    type: 'text',
-    help: 'Drive link to the proposal. Files themselves attach on the Proposals tab.',
+    type: 'file',
   },
 ]
 

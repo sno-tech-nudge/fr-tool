@@ -9,6 +9,7 @@ import { OrganisationForm, type Organisation } from '../components/organisations
 import { ContactForm, type Contact } from '../components/contacts/ContactForm'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { OrgNewsTab } from '../components/organisations/OrgNewsTab'
+import { DocumentsTab } from '../components/documents/DocumentsTab'
 import { AccountOverview } from '../components/organisations/AccountOverview'
 import {
   CAPITAL_CATEGORIES, DONOR_TYPES, GRANT_STATUSES, RELATIONSHIP_STATUSES, SENIORITIES,
@@ -20,13 +21,14 @@ import { useEmployees } from '../hooks/useEmployees'
 
 export const Route = createFileRoute('/_app/organisations/$id')({ component: OrganisationDetail })
 
-type Tab = 'overview' | 'contacts' | 'opportunities' | 'grants' | 'activity' | 'news'
+type Tab = 'overview' | 'contacts' | 'opportunities' | 'grants' | 'documents' | 'activity' | 'news'
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'opportunities', label: 'Deals' },
   { key: 'grants', label: 'Grants' },
+  { key: 'documents', label: 'Documents' },
   { key: 'activity', label: 'Activity' },
   { key: 'news', label: 'News' },
 ]
@@ -214,6 +216,7 @@ function OrganisationDetail() {
       {tab === 'contacts' ? <OrgContacts organisationId={org.id} orgName={org.name} /> : null}
       {tab === 'opportunities' ? <OrgOpportunities organisationId={org.id} /> : null}
       {tab === 'grants' ? <OrgGrants organisationId={org.id} /> : null}
+      {tab === 'documents' ? <DocumentsTab organisationId={org.id} /> : null}
       {tab === 'activity' ? <ActivityFeed parentType="organisation" parentId={org.id} /> : null}
       {tab === 'news' ? <OrgNewsTab organisationId={org.id} /> : null}
 

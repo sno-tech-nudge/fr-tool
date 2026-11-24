@@ -10,6 +10,8 @@ import { StageMoveDialog } from '../components/opportunities/StageMoveDialog'
 import { WonWizard } from '../components/grants/WonWizard'
 import { moveOpportunityStage, stageMoveRequirement, type StageMoveExtras } from '../components/opportunities/stageMove'
 import { ActivityFeed } from '../components/ActivityFeed'
+import { ProposalOpen } from '../components/opportunities/ProposalFileField'
+import { DocumentsTab } from '../components/documents/DocumentsTab'
 import {
   CAPITAL_CATEGORIES, OPPORTUNITY_TYPES, PROPOSAL_STATUSES, PROPOSAL_TYPES, labelOf,
 } from '../lib/enums'
@@ -20,18 +22,21 @@ import { usePipelineStages, type Stage } from '../hooks/usePipelineStages'
 
 export const Route = createFileRoute('/_app/opportunities/$id')({ component: OpportunityDetail })
 
-type Tab = 'overview' | 'programs' | 'activity' | 'history' | 'proposals' | 'collaborators'
+type Tab = 'overview' | 'programs' | 'activity' | 'documents' | 'history' | 'proposals' | 'collaborators'
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'programs', label: 'Programs' },
   { key: 'activity', label: 'Activity' },
+  { key: 'documents', label: 'Documents' },
   { key: 'history', label: 'Stage history' },
   { key: 'proposals', label: 'Proposals' },
   { key: 'collaborators', label: 'Collaborators' },
 ]
 
 type OppWithOrg = Opportunity & { fr_organisations: { id: string; name: string } | null }
+/** Set by the Zoho document import; absent until documents.sql has run. */
+type DealLinks = { drive_folder_url?: string | null; zoho_record_url?: string | null }
 
 function OpportunityDetail() {
   const { id } = Route.useParams()
@@ -258,6 +263,13 @@ function OpportunityDetail() {
 
       {tab === 'programs' ? <ProgramsTab opportunityId={opp.id} /> : null}
       {tab === 'activity' ? <ActivityFeed parentType="opportunity" parentId={opp.id} /> : null}
+      {tab === 'documents' ? (
+        <DocumentsTab
+          opportunityId={opp.id}
+          folderUrl={(opp as OppWithOrg & DealLinks).drive_folder_url}
+          zohoUrl={(opp as OppWithOrg & DealLinks).zoho_record_url}
+        />
+      ) : null}
       {tab === 'history' ? <HistoryTab opportunityId={opp.id} /> : null}
       {tab === 'proposals' ? <ProposalsTab opportunityId={opp.id} /> : null}
       {tab === 'collaborators' ? <CollaboratorsTab opportunityId={opp.id} /> : null}
@@ -641,7 +653,7 @@ function ProposalsTab({ opportunityId }: { opportunityId: string }) {
                   <td><Badge tone="outline">{labelOf(PROPOSAL_STATUSES, p.status)}</Badge></td>
                   <td>
                     {p.document_url ? (
-                      <a href={p.document_url} target="_blank" rel="noreferrer noopener" className="celllink">Open</a>
+                      <ProposalOpen value={p.document_url} />
                     ) : <span className="faint">—</span>}
                   </td>
                 </tr>
