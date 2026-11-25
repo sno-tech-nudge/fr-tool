@@ -25,6 +25,7 @@ import { Route as AppAdminHealthRouteImport } from './routes/_app.admin.health'
 import { Route as AppAdminNotificationsRouteImport } from './routes/_app.admin.notifications'
 import { Route as AppAdminPeopleRouteImport } from './routes/_app.admin.people'
 import { Route as AppAdminTeamRouteImport } from './routes/_app.admin.team'
+import { Route as AppAdminZohoOwnersRouteImport } from './routes/_app.admin.zoho-owners'
 import { Route as AppGrantsIndexRouteImport } from './routes/_app.grants.index'
 import { Route as AppGrantsIdRouteImport } from './routes/_app.grants.$id'
 import { Route as AppOpportunitiesIndexRouteImport } from './routes/_app.opportunities.index'
@@ -111,6 +112,11 @@ const AppAdminTeamRoute = AppAdminTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminZohoOwnersRoute = AppAdminZohoOwnersRouteImport.update({
+  id: '/zoho-owners',
+  path: '/zoho-owners',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppGrantsIndexRoute = AppGrantsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AppAdminNotificationsRoute
   '/admin/people': typeof AppAdminPeopleRoute
   '/admin/team': typeof AppAdminTeamRoute
+  '/admin/zoho-owners': typeof AppAdminZohoOwnersRoute
   '/grants/$id': typeof AppGrantsIdRoute
   '/opportunities/$id': typeof AppOpportunitiesIdRoute
   '/organisations/$id': typeof AppOrganisationsIdRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AppAdminNotificationsRoute
   '/admin/people': typeof AppAdminPeopleRoute
   '/admin/team': typeof AppAdminTeamRoute
+  '/admin/zoho-owners': typeof AppAdminZohoOwnersRoute
   '/grants/$id': typeof AppGrantsIdRoute
   '/opportunities/$id': typeof AppOpportunitiesIdRoute
   '/organisations/$id': typeof AppOrganisationsIdRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/_app/admin/notifications': typeof AppAdminNotificationsRoute
   '/_app/admin/people': typeof AppAdminPeopleRoute
   '/_app/admin/team': typeof AppAdminTeamRoute
+  '/_app/admin/zoho-owners': typeof AppAdminZohoOwnersRoute
   '/_app/grants/$id': typeof AppGrantsIdRoute
   '/_app/opportunities/$id': typeof AppOpportunitiesIdRoute
   '/_app/organisations/$id': typeof AppOrganisationsIdRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/people'
     | '/admin/team'
+    | '/admin/zoho-owners'
     | '/grants/$id'
     | '/opportunities/$id'
     | '/organisations/$id'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/people'
     | '/admin/team'
+    | '/admin/zoho-owners'
     | '/grants/$id'
     | '/opportunities/$id'
     | '/organisations/$id'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/_app/admin/notifications'
     | '/_app/admin/people'
     | '/_app/admin/team'
+    | '/_app/admin/zoho-owners'
     | '/_app/grants/$id'
     | '/_app/opportunities/$id'
     | '/_app/organisations/$id'
@@ -397,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminTeamRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/zoho-owners': {
+      id: '/_app/admin/zoho-owners'
+      path: '/zoho-owners'
+      fullPath: '/admin/zoho-owners'
+      preLoaderRoute: typeof AppAdminZohoOwnersRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/grants/': {
       id: '/_app/grants/'
       path: '/'
@@ -449,6 +468,7 @@ interface AppAdminRouteChildren {
   AppAdminNotificationsRoute: typeof AppAdminNotificationsRoute
   AppAdminPeopleRoute: typeof AppAdminPeopleRoute
   AppAdminTeamRoute: typeof AppAdminTeamRoute
+  AppAdminZohoOwnersRoute: typeof AppAdminZohoOwnersRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
 }
 
@@ -459,6 +479,7 @@ const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminNotificationsRoute: AppAdminNotificationsRoute,
   AppAdminPeopleRoute: AppAdminPeopleRoute,
   AppAdminTeamRoute: AppAdminTeamRoute,
+  AppAdminZohoOwnersRoute: AppAdminZohoOwnersRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
 }
 

@@ -32,6 +32,8 @@ export async function uploadDealDocument(opts: {
   file: File
   employeeId: string | null
   employeeName: string | null
+  /** Where on the deal it sits: a grant, its report period, the report itself. */
+  links?: { grant_id?: string | null; report_period_id?: string | null; milestone_id?: string | null }
 }): Promise<DealDocument> {
   const { opportunityId, docType, file, employeeId, employeeName } = opts
   let organisationId = opts.organisationId ?? null
@@ -63,6 +65,7 @@ export async function uploadDealDocument(opts: {
       added_by_name: employeeName,
       source_detail: 'app',
       created_by: employeeId,
+      ...(opts.links ?? {}),
     })
     .select('id, name, file_path, size_bytes')
     .single()

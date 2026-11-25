@@ -19,6 +19,7 @@ import { useEmployees } from '../hooks/useEmployees'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
 import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
+import { SearchSelect } from '../components/SearchSelect'
 
 export const Route = createFileRoute('/_app/grants/')({
   beforeLoad: (opts) => restoreFilters('grants', '/grants', opts),
@@ -198,10 +199,13 @@ function GrantsList({ views }: { views: React.ReactNode }) {
           <option value="all">All</option>
           {GRANT_STATUSES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
-        <Select label="Owner" value={ownerSelectValue(filters.owner, access.employeeId)} onChange={(e) => setFilter('owner', ownerParam(e.currentTarget.value, access.employeeId))}>
-          <option value={ANY_OWNER}>Anyone</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-        </Select>
+        <SearchSelect
+          label="Owner"
+          width={190}
+          value={ownerSelectValue(filters.owner, access.employeeId)}
+          options={[{ value: ANY_OWNER, label: 'Anyone' }, ...employees.map((e) => ({ value: e.id, label: e.name }))]}
+          onChange={(v) => setFilter('owner', ownerParam(v, access.employeeId))}
+        />
         <Select label="Category" value={filters.capital_category} onChange={(e) => setFilter('capital_category', e.currentTarget.value)}>
           <option value="">All</option>
           {CAPITAL_CATEGORIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

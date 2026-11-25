@@ -23,6 +23,7 @@ import { usePipelineStages, type Stage } from '../hooks/usePipelineStages'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
 import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
+import { SearchSelect } from '../components/SearchSelect'
 
 export const Route = createFileRoute('/_app/opportunities/')({
   beforeLoad: (opts) => restoreFilters('deals', '/opportunities', opts),
@@ -312,10 +313,13 @@ function OpportunitiesPage() {
 
       <div className="filterbar filterbar--compact">
         <SearchInput value={filters.q} onChange={(v) => setFilter('q', v)} placeholder="Search" />
-        <Select label="Owner" style={{ width: 176 }} value={ownerSelectValue(filters.owner, access.employeeId)} onChange={(e) => setFilter('owner', ownerParam(e.currentTarget.value, access.employeeId))}>
-          <option value={ANY_OWNER}>Anyone</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-        </Select>
+        <SearchSelect
+          label="Owner"
+          width={176}
+          value={ownerSelectValue(filters.owner, access.employeeId)}
+          options={[{ value: ANY_OWNER, label: 'Anyone' }, ...employees.map((e) => ({ value: e.id, label: e.name }))]}
+          onChange={(v) => setFilter('owner', ownerParam(v, access.employeeId))}
+        />
         <Select label="Category" style={{ width: 150 }} value={filters.capital_category} onChange={(e) => setFilter('capital_category', e.currentTarget.value)}>
           <option value="">All</option>
           {CAPITAL_CATEGORIES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

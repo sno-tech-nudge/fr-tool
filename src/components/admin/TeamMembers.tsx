@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import {
   Badge, Button, ConfirmDialog, EmptyState, Select, TableSkeleton, useToast,
 } from '../ui'
-import { formatDate } from '../../lib/format'
 
 type Employee = { id: string; name: string; email: string; erp_role: string }
 type Member = {
@@ -203,11 +202,10 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th style={{ width: '140px' }}>ERP role</th>
+                <th style={{ width: '120px' }}>ERP role</th>
                 <th style={{ width: '150px' }}>FR role</th>
                 <th style={{ width: '210px' }}>Team</th>
-                <th style={{ width: '110px' }}>Active</th>
-                <th style={{ width: '130px' }}>Added</th>
+                <th style={{ width: '80px' }}>Active</th>
                 {canEdit ? <th className="col-actions">&nbsp;</th> : null}
               </tr>
             </thead>
@@ -215,13 +213,17 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
               {members.map((m) => (
                 <tr key={m.id}>
                   <td>{m.employees?.name ?? <span className="faint">Unknown</span>}</td>
-                  <td className="muted">{m.employees?.email ?? '—'}</td>
+                  <td className="muted">
+                    {/* Breaks before the @ when the column is narrow. */}
+                    {m.employees?.email ? <>{m.employees.email.split('@')[0]}<wbr />@{m.employees.email.split('@')[1]}</> : '—'}
+                  </td>
                   <td><Badge tone="outline">{m.employees?.erp_role ?? '—'}</Badge></td>
                   <td>
                     {canEdit ? (
                       <Select
                         value={m.fr_sub_role}
                         aria-label="FR role"
+                        style={{ minWidth: 120 }}
                         onChange={(e) => void updateMember(m.id, { fr_sub_role: e.currentTarget.value as Member['fr_sub_role'] })}
                       >
                         {SUB_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
@@ -235,6 +237,7 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
                       <Select
                         value={m.focus ?? ''}
                         aria-label="Team"
+                        style={{ minWidth: 170 }}
                         onChange={(e) => void updateMember(m.id, { focus: (e.currentTarget.value || null) as Member['focus'] })}
                       >
                         <option value="">Not set</option>
@@ -254,7 +257,6 @@ export function TeamMembers({ canEdit }: { canEdit: boolean }) {
                       style={{ accentColor: 'var(--action)', width: 15, height: 15 }}
                     />
                   </td>
-                  <td className="tn-num muted">{formatDate(m.created_at)}</td>
                   {canEdit ? (
                     <td className="col-actions">
                       <Button size="sm" variant="ghost" aria-label="Remove" onClick={() => setRemoveTarget(m)}>

@@ -11,6 +11,7 @@ import { formatMoney } from '../lib/format'
 import { useEmployees } from '../hooks/useEmployees'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
+import { SearchSelect } from '../components/SearchSelect'
 
 export const Route = createFileRoute('/_app/organisations/')({
   beforeLoad: (opts) => restoreFilters('companies', '/organisations', opts),
@@ -88,10 +89,13 @@ function OrganisationsPage() {
           <option value="">All</option>
           {RELATIONSHIP_STATUSES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
-        <Select label="Owner" value={filters.owner} onChange={(e) => setFilter('owner', e.currentTarget.value)}>
-          <option value="">Anyone</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-        </Select>
+        <SearchSelect
+          label="Owner"
+          width={190}
+          value={filters.owner}
+          options={[{ value: '', label: 'Anyone' }, ...employees.map((e) => ({ value: e.id, label: e.name }))]}
+          onChange={(v) => setFilter('owner', v)}
+        />
       </div>
 
       {error ? (

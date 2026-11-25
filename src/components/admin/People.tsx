@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import {
-  Badge, Button, EmptyState, Select, TableSkeleton, useToast,
+  Badge, Button, EmptyState, Input, Select, TableSkeleton, useToast,
 } from '../ui'
 import { useAccess } from '../../lib/accessContext'
 
@@ -54,6 +54,10 @@ export function People() {
   const [teamIds, setTeamIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [newName, setNewName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
+  const [newRole, setNewRole] = useState('member')
+  const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
     setPeople(null)
@@ -93,6 +97,24 @@ export function People() {
     toast.success('Role updated.')
   }
 
+  /** Adds someone to the staff list (sql/phase5/add_person.sql checks the rest). */
+  async function addPerson(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newName.trim() || !newEmail.trim()) { toast.error('Enter a name and an email.'); return }
+    setAdding(true)
+    const { data, error: err } = await supabase
+      .rpc('fr_add_person', { p_name: newName, p_email: newEmail, p_erp_role: newRole })
+      .single()
+    setAdding(false)
+    if (err) { toast.error(err.message); return }
+    const added = data as Person
+    setPeople((prev) => [...(prev ?? []), added].sort((a, b) => a.name.localeCompare(b.name)))
+    setNewName('')
+    setNewEmail('')
+    setNewRole('member')
+    toast.success(`Added ${added.name}`)
+  }
+
   /** A manager with no module reaches nothing, so the two move together. */
   function setRole(p: Person, role: string) {
     const patch: Partial<Person> = { erp_role: role }
@@ -106,6 +128,21 @@ export function People() {
       <div>
         <h2 className="page__title">People</h2>
       </div>
+
+      <form className="card row" onSubmit={(e) => void addPerson(e)} style={{ gap: 'var(--space-3)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <Input label="Name" value={newName} onChange={(e) => setNewName(e.currentTarget.value)} disabled={adding} />
+        </div>
+        <div style={{ flex: '1 1 260px' }}>
+          <Input label="Email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.currentTarget.value)} disabled={adding} />
+        </div>
+        <div style={{ flex: '0 0 170px' }}>
+          <Select label="ERP role" value={newRole} onChange={(e) => setNewRole(e.currentTarget.value)} disabled={adding}>
+            {ERP_ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </Select>
+        </div>
+        <Button type="submit" disabled={adding}>{adding ? 'Adding…' : 'Add person'}</Button>
+      </form>
 
       {error ? (
         <div className="card">

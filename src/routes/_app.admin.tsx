@@ -71,6 +71,12 @@ function AdminLayout() {
             Feedback
           </Link>
         ) : null}
+        {/* Temporary, until everyone from Zoho is in the tool. */}
+        {access.erpRole === 'super_admin' ? (
+          <Link to="/admin/zoho-owners" className="tab" data-active={pathname === '/admin/zoho-owners'}>
+            Zoho owners
+          </Link>
+        ) : null}
       </nav>
 
       <Outlet />
