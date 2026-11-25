@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Fundraising" />
@@ -19,6 +19,11 @@
         var theme = document.createElement('meta'); theme.name = 'theme-color'; theme.content = '#ffffff'
         var capable = document.createElement('meta'); capable.name = 'mobile-web-app-capable'; capable.content = 'yes'
         document.head.append(link, theme, capable)
+        // Installed app only: draw edge to edge and pad for the notch and home bar.
+        // In a phone browser the browser keeps its own bars clear; with cover there,
+        // it reports a bottom inset that opens a gap under the tab bar.
+        var installed = m('(display-mode: standalone)').matches || navigator.standalone === true
+        if (installed) document.querySelector('meta[name="viewport"]').content = 'width=device-width, initial-scale=1, viewport-fit=cover'
       })()
     </script>
     <title>Fundraising · The/Nudge</title>

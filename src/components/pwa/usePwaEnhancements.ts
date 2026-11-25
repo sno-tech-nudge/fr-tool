@@ -75,6 +75,16 @@ function markWideDetails() {
   })
 }
 
+/** Configuration lists lead with an Order number; on a phone it is dropped. */
+const NOORDER_CLASS = 'fr-pwa-noorder'
+function markOrderTables() {
+  document.querySelectorAll<HTMLTableElement>('.fr-pwa__main .tablewrap > .table').forEach((t) => {
+    const first = t.querySelector('thead th')?.textContent?.trim()
+    const noorder = first === 'Order'
+    if (t.classList.contains(NOORDER_CLASS) !== noorder) t.classList.toggle(NOORDER_CLASS, noorder)
+  })
+}
+
 export function usePwaEnhancements() {
   useEffect(() => {
     let frame = 0
@@ -83,6 +93,7 @@ export function usePwaEnhancements() {
       foldButtons()
       wireFilterBars()
       markWideDetails()
+      markOrderTables()
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(run) }
     run()
@@ -155,6 +166,7 @@ export function usePwaEnhancements() {
       document.querySelectorAll(`.${TOGGLE_CLASS}`).forEach((t) => t.remove())
       document.querySelectorAll('[data-fr-open]').forEach((f) => f.removeAttribute('data-fr-open'))
       document.querySelectorAll(`.${WIDE_CLASS}`).forEach((r) => r.classList.remove(WIDE_CLASS))
+      document.querySelectorAll(`.${NOORDER_CLASS}`).forEach((t) => t.classList.remove(NOORDER_CLASS))
     }
   }, [])
 }

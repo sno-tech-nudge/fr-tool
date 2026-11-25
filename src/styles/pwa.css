@@ -318,25 +318,42 @@ html[data-app-shell="pwa"] .filterbar > .searchbox { grid-column: 1 / -1; min-wi
 html[data-app-shell="pwa"] .filterbar:has(> .fr-pwa-filtertoggle) > .searchbox { margin-right: 48px; }
 html[data-app-shell="pwa"] .filterbar > .fr-pwa-filtertoggle { position: absolute; top: 0; right: 0; width: 40px; padding: 0; }
 html[data-app-shell="pwa"] .filterbar:not(:has(> .searchbox)) > .fr-pwa-filtertoggle { position: static; grid-column: 1 / -1; justify-self: end; }
-html[data-app-shell="pwa"] .filterbar > .fr-pwa-filtertoggle[aria-expanded="true"] { --_bg: var(--surface-sunken); }
 html[data-app-shell="pwa"] .filterbar:has(> .fr-pwa-filtertoggle):not([data-fr-open]) > :not(.searchbox, .fr-pwa-filtertoggle) { display: none; }
 html[data-app-shell="pwa"] .filterbar .field { min-width: 0 !important; width: auto !important; }
 html[data-app-shell="pwa"] .filterbar :is(.select, .input, .multiselect__button) { width: 100% !important; min-height: 40px; }
 
-/* Dashboards' filter panel: folded, it is just the Filters icon and Export
-   at the right; open, each pill group is one swipeable row. */
-html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle) { align-items: center; gap: var(--space-3); }
-html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle):not([data-fr-open]) {
-  padding: 0;
-  background: none;
-  border: 0;
+/* Dashboards: the Filters icon and Export sit at the right of the heading.
+   The panel's box dissolves (display: contents) so its buttons can share the
+   heading's row; open, each pill group is a swipeable row under the heading. */
+html[data-app-shell="pwa"] .page:has(> .filterpanel > .fr-pwa-filtertoggle) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  column-gap: var(--space-2);
+  align-content: start;
 }
-html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle):not([data-fr-open]) > .filtergroup { display: none; }
-html[data-app-shell="pwa"] .filterpanel > .fr-pwa-filtertoggle { order: 1; margin-left: auto; width: 40px; padding: 0; }
-html[data-app-shell="pwa"] .filterpanel > .fr-pwa-filtertoggle[aria-expanded="true"] { --_bg: var(--surface-sunken); }
-html[data-app-shell="pwa"] .filterpanel > :not(.filtergroup, .fr-pwa-filtertoggle) { order: 2; margin-left: 0; }
+html[data-app-shell="pwa"] .page:has(> .filterpanel > .fr-pwa-filtertoggle) > * { grid-column: 1 / -1; min-width: 0; }
+html[data-app-shell="pwa"] .page:has(> .filterpanel > .fr-pwa-filtertoggle) > .page__head { grid-column: 1; grid-row: 1; }
+html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle) { display: contents; }
+html[data-app-shell="pwa"] .filterpanel > * { grid-column: 1 / -1; justify-self: start; }
+html[data-app-shell="pwa"] .filterpanel > .fr-pwa-filtertoggle { grid-column: 2; grid-row: 1; align-self: start; width: 40px; padding: 0; }
+html[data-app-shell="pwa"] .filterpanel > .exportmenu { grid-column: 3; grid-row: 1; align-self: start; }
 html[data-app-shell="pwa"] .filterpanel .exportmenu > .btn { min-height: 40px; }
-html[data-app-shell="pwa"] .filterpanel > .filtergroup { order: 3; flex: 1 1 100%; min-width: 0; }
+html[data-app-shell="pwa"] .filterpanel:not([data-fr-open]) > .filtergroup { display: none; }
+html[data-app-shell="pwa"] .filterpanel > .filtergroup { justify-self: stretch; margin-bottom: var(--space-3); }
+html[data-app-shell="pwa"] .filterpanel > .btn--ghost { margin-bottom: var(--space-3); }
+
+/* Open filters: the icon button turns solid brown. */
+html[data-app-shell="pwa"] .fr-pwa-filtertoggle[aria-expanded="true"] { --_bg: var(--action); --_fg: var(--action-text); }
+
+/* A phone has no hover, but taps leave :hover stuck on the last button
+   touched (it turned the open Filters icon white on cream). Hover looks
+   only where a real pointer can hover. */
+@media (hover: none) {
+  html[data-app-shell="pwa"] .btn--primary:hover:not(:disabled) { --_bg: var(--action); --_bd: var(--action); }
+  html[data-app-shell="pwa"] .btn--secondary:hover:not(:disabled) { --_bg: transparent; --_fg: var(--action); }
+  html[data-app-shell="pwa"] .btn--ghost:hover:not(:disabled) { --_bg: transparent; }
+  html[data-app-shell="pwa"] .fr-pwa-filtertoggle[aria-expanded="true"]:hover { --_bg: var(--action); --_fg: var(--action-text); }
+}
 html[data-app-shell="pwa"] .filterpanel .pillrow {
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -361,6 +378,9 @@ html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
+/* Some boxes cap their height with an inline overflow that also shuts off
+   sideways scrolling (the overdue table on Grants & money). */
+html[data-app-shell="pwa"] .tablewrap[style*="overflow"] { overflow-x: auto !important; }
 html[data-app-shell="pwa"] .table :is(th, td) { padding: var(--space-3); }
 html[data-app-shell="pwa"] .table td:not(:first-child) { white-space: nowrap; }
 html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .table :is(th, td):first-child {
@@ -372,3 +392,17 @@ html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .tabl
 }
 html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .table th:first-child { background: var(--surface-paper); z-index: 2; }
 html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .table td:first-child:not(.tn-num) { min-width: 132px; max-width: 168px; overflow-wrap: anywhere; }
+
+/* Configuration lists: the Order number column is dropped and the name
+   (the next column) is the one pinned. usePwaEnhancements marks the table. */
+html[data-app-shell="pwa"] .table.fr-pwa-noorder :is(th, td):first-child { display: none; }
+html[data-app-shell="pwa"] .tablewrap .table.fr-pwa-noorder :is(th, td):nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-card);
+  box-shadow: inset -1px 0 0 var(--border);
+}
+html[data-app-shell="pwa"] .tablewrap .table.fr-pwa-noorder th:nth-child(2) { background: var(--surface-paper); z-index: 2; }
+/* It holds a one-word key or code, so it keeps one line at its own width. */
+html[data-app-shell="pwa"] .tablewrap .table.fr-pwa-noorder td:nth-child(2) { white-space: nowrap; }

@@ -3,7 +3,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
-  Badge, Button, EmptyState, SearchInput, Select, Skeleton, TableSkeleton, useToast,
+  Badge, Button, EmptyState, Pagination, SearchInput, Select, Skeleton, TableSkeleton, useToast,
 } from '../components/ui'
 import { OpportunityForm } from '../components/opportunities/OpportunityForm'
 import { WonWizard } from '../components/grants/WonWizard'
@@ -24,18 +24,23 @@ import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
 import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
 import { SearchSelect } from '../components/SearchSelect'
+import { useIsMobile, useIsStandalone } from '../lib/pwa'
 
 export const Route = createFileRoute('/_app/opportunities/')({
   beforeLoad: (opts) => restoreFilters('deals', '/opportunities', opts),
   component: OpportunitiesPage,
 })
 
+// view: unset means the device's own default (board on a laptop, list on a phone).
 const DEFAULTS = {
-  view: 'board', q: '', owner: '', capital_category: '', deal_category: '',
+  view: '', page: '', q: '', owner: '', capital_category: '', deal_category: '',
   fy: '', quarter: '', open: '',
 }
 
 const SELECT_COLS = '*, fr_organisations(id, name)'
+
+/** Phones show the list a page at a time; laptops show it whole. */
+const PHONE_PAGE_SIZE = 50
 
 /** What the Excel export reads: the same deals, with the organisation's name. */
 type ExportDeal = {
@@ -91,7 +96,9 @@ function OpportunitiesPage() {
   const [moving, setMoving] = useState(false)
   const [wonDeal, setWonDeal] = useState<WonSubject | null>(null)
 
-  const isBoard = filters.view !== 'list'
+  const phone = useIsMobile() || useIsStandalone()
+  const isBoard = filters.view ? filters.view !== 'list' : !phone
+  const page = Math.max(1, Number(filters.page) || 1)
 
   // The board defaults to open deals only (it's a working view) and the list
   // defaults to everything — but either can be overridden explicitly via the
@@ -382,7 +389,7 @@ function OpportunitiesPage() {
               </tr>
             </thead>
             <tbody>
-              {cards.map((o) => {
+              {(phone ? cards.slice((page - 1) * PHONE_PAGE_SIZE, page * PHONE_PAGE_SIZE) : cards).map((o) => {
                 const stage = stageOf(o.stage_id)
                 return (
                   <tr
@@ -431,6 +438,15 @@ function OpportunitiesPage() {
           </table>
         </div>
       )}
+
+      {phone && !isBoard && cards && cards.length > 0 ? (
+        <Pagination
+          page={page}
+          pageSize={PHONE_PAGE_SIZE}
+          total={cards.length}
+          onPage={(p) => { setFilter('page', String(p)); window.scrollTo(0, 0) }}
+        />
+      ) : null}
 
       <OpportunityForm
         open={formOpen}
