@@ -6,6 +6,7 @@ import { useAccess } from '../../lib/accessContext'
 import { NAV, isNavActive } from '../../lib/nav'
 import { useKeyboardOpen, usePwaInstall } from '../../lib/pwa'
 import { MentionBell } from '../MentionBell'
+import { usePwaEnhancements } from './usePwaEnhancements'
 
 /**
  * The phone / installed-app shell: sticky header, the page, a fixed bottom bar
@@ -20,6 +21,7 @@ export function PwaShell({ children }: { children: React.ReactNode }) {
   const keyboardOpen = useKeyboardOpen()
   const install = usePwaInstall()
   const [moreOpen, setMoreOpen] = useState(false)
+  usePwaEnhancements()
 
   useEffect(() => {
     const root = document.documentElement

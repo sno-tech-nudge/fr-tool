@@ -180,3 +180,195 @@ html[data-app-shell="pwa"] .newscard { flex: 0 0 100%; min-width: 0; box-sizing:
 html[data-app-shell="pwa"] .newsrail__nav { width: 36px; height: 36px; }
 html[data-app-shell="pwa"] .newsrail__nav--prev { left: 4px; }
 html[data-app-shell="pwa"] .newsrail__nav--next { right: 4px; }
+
+/* ============================================================
+   Shared building blocks
+   ============================================================ */
+
+/* ---------- page head ----------
+   Title and its actions share a line; actions drop below only when they
+   cannot fit. The !important on gap beats the inline style on the row. */
+html[data-app-shell="pwa"] .page__head {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+html[data-app-shell="pwa"] .page__head > :first-child { flex: 1 1 auto; min-width: 0; }
+html[data-app-shell="pwa"] .page__head > .row { flex-wrap: wrap; gap: var(--space-2) !important; }
+html[data-app-shell="pwa"] .page__title { font-size: var(--text-lg); }
+
+/* Record pages (deal, company, grant): the name gets the full width; the
+   stage picker and buttons sit on their own row beneath. */
+html[data-app-shell="pwa"] .rechead__top { flex-wrap: wrap; gap: var(--space-3); }
+html[data-app-shell="pwa"] .rechead__top > :first-child { flex: 1 1 100%; min-width: 0; }
+html[data-app-shell="pwa"] .rechead__top > .row { flex: 1 1 100%; flex-wrap: wrap; gap: var(--space-2) !important; }
+html[data-app-shell="pwa"] .rechead__top > .row > div:has(> .field) { flex: 1 1 0; min-width: 0 !important; }
+html[data-app-shell="pwa"] .rechead__name { overflow-wrap: anywhere; }
+
+/* ---------- deals board ----------
+   The board fills exactly the space between header and bottom bar, and shows
+   one stage per screen with the next peeking in; swipe to move between them. */
+html[data-app-shell="pwa"] .fr-pwa__main:has(> .page--board) { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+html[data-app-shell="pwa"] .page--board {
+  height: calc(100dvh - 56px - env(safe-area-inset-top, 0px) - 60px - env(safe-area-inset-bottom, 0px));
+}
+html[data-app-shell="pwa"] .page--board .kboard {
+  margin-inline: calc(-1 * var(--space-4));
+  padding-inline: var(--space-4);
+  scroll-padding-inline: var(--space-4);
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+html[data-app-shell="pwa"] .page--board .kcol { flex: 0 0 calc(100% - 40px); scroll-snap-align: start; }
+
+/* ---------- drawers, dialogs, toasts ----------
+   Drawers are full-screen sheets sized to the visible screen (dvh, so the
+   iPhone toolbar never hides Save), clear of the notch and the home bar,
+   with Cancel/Save as two equal buttons. Side-by-side fields go two to a row
+   (the !important beats inline widths on a few of them). */
+html[data-app-shell="pwa"] .drawer { height: 100dvh; }
+html[data-app-shell="pwa"] .drawer__head { padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-3); }
+html[data-app-shell="pwa"] .drawer__body { padding: var(--space-4); }
+html[data-app-shell="pwa"] .drawer__foot { padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); }
+html[data-app-shell="pwa"] .drawer__foot > .btn { flex: 1 1 0; }
+html[data-app-shell="pwa"] .drawer__body .row:has(.field) { flex-wrap: wrap; gap: var(--space-3) !important; }
+html[data-app-shell="pwa"] .drawer__body .row:has(.field) > * { flex: 1 1 140px; min-width: 0; width: auto !important; }
+
+html[data-app-shell="pwa"] .scrim:not(.scrim--drawer) { padding: var(--space-4); }
+html[data-app-shell="pwa"] .dialog { max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-4); }
+html[data-app-shell="pwa"] .dialog__actions { flex-wrap: wrap; }
+html[data-app-shell="pwa"] .dialog__actions > .btn { flex: 1 1 0; }
+
+/* Toasts sit above the bottom bar, full width. */
+html[data-app-shell="pwa"] .toasts {
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: calc(60px + env(safe-area-inset-bottom, 0px) + var(--space-3));
+}
+
+/* Record-page tabs: a swipeable row, tighter, with no scroll bar; the last
+   visible tab is cut by the edge, which shows there is more to swipe to. */
+html[data-app-shell="pwa"] .tabs {
+  gap: var(--space-4);
+  margin-inline: calc(-1 * var(--space-4));
+  padding-inline: var(--space-4);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+html[data-app-shell="pwa"] .tabs::-webkit-scrollbar { display: none; }
+html[data-app-shell="pwa"] .tab { padding-top: var(--space-2); }
+
+/* Record overviews: two short fields to a row; long values (marked by
+   usePwaEnhancements) take the full width. */
+html[data-app-shell="pwa"] .detaillist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-4); }
+html[data-app-shell="pwa"] .detaillist__row.fr-pwa-wide { grid-column: 1 / -1; }
+html[data-app-shell="pwa"] .detaillist dd { overflow-wrap: anywhere; }
+
+/* Cards laid out as a row (a summary on the left, a note on the right) stack
+   when the two cannot sit side by side. */
+html[data-app-shell="pwa"] .fr-pwa__main .card.row { flex-wrap: wrap; }
+
+/* Home section heads: the title, then the actions wrapping under it. */
+html[data-app-shell="pwa"] .homesec__head { flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+html[data-app-shell="pwa"] .homesec__action { max-width: 100%; }
+html[data-app-shell="pwa"] .homesec__action > .row { flex-wrap: wrap; gap: var(--space-2) var(--space-3) !important; }
+
+/* ---------- buttons ---------- */
+html[data-app-shell="pwa"] .btn { min-height: 40px; max-width: 100%; padding-inline: 0.9em; }
+html[data-app-shell="pwa"] .viewswitch button { min-height: 38px; }
+html[data-app-shell="pwa"] .btn--sm { min-height: 36px; }
+/* A long-named button shows only its icon (usePwaEnhancements folds it);
+   press and hold shows the name. */
+html[data-app-shell="pwa"] .btn.fr-pwa-iconbtn {
+  width: 40px;
+  padding: 0;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+html[data-app-shell="pwa"] .btn--sm.fr-pwa-iconbtn { width: 36px; }
+html[data-app-shell="pwa"] .btn.fr-pwa-iconbtn > span { display: none; }
+html[data-app-shell="pwa"] .btn.fr-pwa-iconbtn > svg { width: 18px; height: 18px; }
+html[data-app-shell="pwa"] .fr-pwa-tip {
+  position: fixed;
+  z-index: 200;
+  max-width: calc(100vw - 16px);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-dark);
+  color: var(--text-on-dark);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+/* ---------- filter bars ----------
+   Search stays out; the rest folds behind the Filters button and opens as a
+   two-up grid. !important beats the inline widths on the fields. */
+html[data-app-shell="pwa"] .filterbar {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  align-items: end;
+}
+html[data-app-shell="pwa"] .filterbar > .searchbox { grid-column: 1 / -1; min-width: 0; height: 40px; box-sizing: border-box; }
+/* The icon sits at the end of the search row; the search keeps its width. */
+html[data-app-shell="pwa"] .filterbar:has(> .fr-pwa-filtertoggle) > .searchbox { margin-right: 48px; }
+html[data-app-shell="pwa"] .filterbar > .fr-pwa-filtertoggle { position: absolute; top: 0; right: 0; width: 40px; padding: 0; }
+html[data-app-shell="pwa"] .filterbar:not(:has(> .searchbox)) > .fr-pwa-filtertoggle { position: static; grid-column: 1 / -1; justify-self: end; }
+html[data-app-shell="pwa"] .filterbar > .fr-pwa-filtertoggle[aria-expanded="true"] { --_bg: var(--surface-sunken); }
+html[data-app-shell="pwa"] .filterbar:has(> .fr-pwa-filtertoggle):not([data-fr-open]) > :not(.searchbox, .fr-pwa-filtertoggle) { display: none; }
+html[data-app-shell="pwa"] .filterbar .field { min-width: 0 !important; width: auto !important; }
+html[data-app-shell="pwa"] .filterbar :is(.select, .input, .multiselect__button) { width: 100% !important; min-height: 40px; }
+
+/* Dashboards' filter panel: folded, it is just the Filters icon and Export
+   at the right; open, each pill group is one swipeable row. */
+html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle) { align-items: center; gap: var(--space-3); }
+html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle):not([data-fr-open]) {
+  padding: 0;
+  background: none;
+  border: 0;
+}
+html[data-app-shell="pwa"] .filterpanel:has(> .fr-pwa-filtertoggle):not([data-fr-open]) > .filtergroup { display: none; }
+html[data-app-shell="pwa"] .filterpanel > .fr-pwa-filtertoggle { order: 1; margin-left: auto; width: 40px; padding: 0; }
+html[data-app-shell="pwa"] .filterpanel > .fr-pwa-filtertoggle[aria-expanded="true"] { --_bg: var(--surface-sunken); }
+html[data-app-shell="pwa"] .filterpanel > :not(.filtergroup, .fr-pwa-filtertoggle) { order: 2; margin-left: 0; }
+html[data-app-shell="pwa"] .filterpanel .exportmenu > .btn { min-height: 40px; }
+html[data-app-shell="pwa"] .filterpanel > .filtergroup { order: 3; flex: 1 1 100%; min-width: 0; }
+html[data-app-shell="pwa"] .filterpanel .pillrow {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+html[data-app-shell="pwa"] .filterpanel .pillrow::-webkit-scrollbar { display: none; }
+html[data-app-shell="pwa"] .filterpanel .pill { flex: none; min-height: 32px; }
+
+/* Charts one per row; the desktop 340px column minimum is wider than a small phone. */
+html[data-app-shell="pwa"] .chartgrid { grid-template-columns: minmax(0, 1fr); }
+
+/* Number tiles: the figure stays on one line in a half-width tile. */
+html[data-app-shell="pwa"] .kpi__value { font-size: var(--text-lg); white-space: nowrap; }
+
+/* ---------- tables ----------
+   Wide tables scroll inside their own box. The first column (the record's
+   name) stays pinned and may wrap to two lines; the rest stay on one line,
+   so rows are short and nothing is squeezed. */
+html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+html[data-app-shell="pwa"] .table :is(th, td) { padding: var(--space-3); }
+html[data-app-shell="pwa"] .table td:not(:first-child) { white-space: nowrap; }
+html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-card);
+  box-shadow: inset -1px 0 0 var(--border);
+}
+html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .table th:first-child { background: var(--surface-paper); z-index: 2; }
+html[data-app-shell="pwa"] :is(.tablewrap, .homesec__scroll, .tablescroll) .table td:first-child:not(.tn-num) { min-width: 132px; max-width: 168px; overflow-wrap: anywhere; }
