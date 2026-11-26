@@ -7,9 +7,11 @@ export type SearchOption = { value: string; label: string }
 /**
  * A select you can type into: shows the chosen option, filters as you type,
  * and goes back to the chosen option if you leave without picking.
+ * With freeText the value is the text itself: options are suggestions and
+ * anything typed is kept.
  */
 export function SearchSelect({
-  label, value, options, onChange, width, placeholder, required,
+  label, value, options, onChange, width, placeholder, required, freeText,
 }: {
   label: string
   value: string
@@ -18,9 +20,10 @@ export function SearchSelect({
   width?: number
   placeholder?: string
   required?: boolean
+  freeText?: boolean
 }) {
   const id = useId()
-  const chosen = options.find((o) => o.value === value) ?? null
+  const chosen = options.find((o) => o.value === value) ?? (freeText && value ? { value, label: value } : null)
   const [query, setQuery] = useState<string | null>(null) // null = not typing
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -65,11 +68,15 @@ export function SearchSelect({
           value={query ?? chosen?.label ?? ''}
           onFocus={(e) => {
             setOpen(true)
-            setActive(Math.max(0, options.findIndex((o) => o.value === value)))
+            // Free text: nothing is highlighted, so Enter keeps what was typed.
+            setActive(freeText ? -1 : Math.max(0, options.findIndex((o) => o.value === value)))
             e.currentTarget.select()
           }}
           onBlur={() => { setQuery(null); setOpen(false) }}
-          onChange={(e) => { setQuery(e.currentTarget.value); setOpen(true); setActive(0) }}
+          onChange={(e) => {
+            setQuery(e.currentTarget.value); setOpen(true); setActive(freeText ? -1 : 0)
+            if (freeText) onChange(e.currentTarget.value)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive((a) => Math.min(a + 1, matches.length - 1)) }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)) }
@@ -83,7 +90,7 @@ export function SearchSelect({
           style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }}
         />
       </div>
-      {open && pos ? createPortal(
+      {open && pos && !(freeText && matches.length === 0) ? createPortal(
         <ul className="mentionlist contactsearch__list" role="listbox" style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: 320, overflowY: 'auto' }}>
           {matches.length === 0 ? (
             <li className="mentionlist__item faint">No match</li>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Button, Checkbox, Drawer, Input, Select, useToast } from '../ui'
 import {
@@ -31,6 +31,8 @@ export type Opportunity = {
   fiscal_year: string | null
   fiscal_quarter: string | null
   owner_user_id: string
+  /** The owner as shown: a person in the tool or any name. */
+  owner_name?: string | null
   /** Set when the deal closes won: who manages the partnership from then on. */
   pm_owner_user_id?: string | null
   geography: string | null
@@ -52,13 +54,16 @@ type Currency = { code: string; name: string }
 const EMPTY = {
   name: '', organisation_id: '', primary_contact_id: '', capital_category: 'programmatic',
   opportunity_type: 'new', stage_id: '', amount: '', currency: 'INR', probability_pct: '',
-  expected_close_date: '', owner_user_id: '', pm_owner_user_id: '', geography: '', next_step: '', next_step_date: '',
+  expected_close_date: '', owner_name: '', pm_owner_user_id: '', geography: '', next_step: '', next_step_date: '',
   deal_category: 'NBD', is_confidential: false, notes: '',
 }
 type Draft = typeof EMPTY
 
-function toDraft(o: Opportunity | null, defaults: { owner: string | null; stageId: string }): Draft {
-  if (!o) return { ...EMPTY, owner_user_id: defaults.owner ?? '', stage_id: defaults.stageId }
+function toDraft(
+  o: Opportunity | null,
+  defaults: { owner: string | null; stageId: string; nameOf: (id: string) => string },
+): Draft {
+  if (!o) return { ...EMPTY, owner_name: defaults.owner ?? '', stage_id: defaults.stageId }
   return {
     name: o.name ?? '',
     organisation_id: o.organisation_id ?? '',
@@ -70,7 +75,7 @@ function toDraft(o: Opportunity | null, defaults: { owner: string | null; stageI
     currency: o.currency ?? 'INR',
     probability_pct: o.probability_pct != null ? String(o.probability_pct) : '',
     expected_close_date: o.expected_close_date ?? '',
-    owner_user_id: o.owner_user_id ?? '',
+    owner_name: o.owner_name ?? defaults.nameOf(o.owner_user_id),
     pm_owner_user_id: o.pm_owner_user_id ?? '',
     geography: o.geography ?? '',
     next_step: o.next_step ?? '',
@@ -108,6 +113,9 @@ export function OpportunityForm({
     return held ? [{ value: held.id, label: held.name }, ...list] : list
   }
   const { stages } = usePipelineStages()
+  /** The team member the typed owner name matches, if any. */
+  const ownerMatch = (name: string) =>
+    team.find((t) => t.name.trim().toLowerCase() === name.trim().toLowerCase())?.id ?? null
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [currencies, setCurrencies] = useState<Currency[]>([])
@@ -117,15 +125,33 @@ export function OpportunityForm({
   const [newCompany, setNewCompany] = useState<string | null>(null)
   const [newContact, setNewContact] = useState<NewContact | null>(null)
 
+  // Owner suggestions: the team first, then every other name already on a deal.
+  const [dealOwnerNames, setDealOwnerNames] = useState<string[]>([])
+  useEffect(() => {
+    if (!open) return
+    void supabase.from('fr_deal_owner_names').select('name').order('name')
+      .then(({ data }) => setDealOwnerNames(((data ?? []) as Array<{ name: string }>).map((r) => r.name)))
+  }, [open])
+  const teamNames = team.map((t) => t.name)
+  const ownerSuggestions = [
+    ...teamNames,
+    ...dealOwnerNames.filter((n) => !teamNames.some((t) => t.toLowerCase() === n.toLowerCase())),
+  ]
+
+  // Read through a ref so the staff list loading doesn't reset the form.
+  const employeesRef = useRef(employees)
+  employeesRef.current = employees
+
   useEffect(() => {
     if (!open) return
     setDraft(toDraft(opportunity, {
-      owner: access.employeeId,
+      owner: access.employeeName,
       stageId: stages[0]?.id ?? '',
+      nameOf: (id) => employeesRef.current.find((e) => e.id === id)?.name ?? '',
     }))
     setNewCompany(null)
     setNewContact(null)
-  }, [open, opportunity, access.employeeId, stages])
+  }, [open, opportunity, access.employeeName, stages])
 
   useEffect(() => {
     let active = true
@@ -169,7 +195,9 @@ export function OpportunityForm({
   async function save() {
     if (!draft.name.trim()) { toast.error('Name is required.'); return }
     if (!draft.organisation_id && !newCompany) { toast.error('Pick or add a company.'); return }
-    if (!draft.owner_user_id) { toast.error('Pick an owner.'); return }
+    if (!draft.owner_name.trim()) { toast.error('Add an owner.'); return }
+    // A typed name that isn't a team member sits with whoever adds it.
+    const ownerId = ownerMatch(draft.owner_name) ?? access.employeeId
     if (!draft.stage_id) { toast.error('Pick a stage.'); return }
 
     setBusy(true)
@@ -181,7 +209,7 @@ export function OpportunityForm({
           name: newCompany.trim(),
           donor_type: 'corporate',
           relationship_status: 'prospect',
-          relationship_owner_user_id: draft.owner_user_id,
+          relationship_owner_user_id: ownerId,
           created_by: access.employeeId,
           updated_by: access.employeeId,
         }).select('id').single()
@@ -197,7 +225,7 @@ export function OpportunityForm({
           full_name: newContact.full_name.trim(),
           phone: newContact.phone.trim() || null,
           email: newContact.email.trim() || null,
-          relationship_owner_user_id: draft.owner_user_id,
+          relationship_owner_user_id: ownerId,
           created_by: access.employeeId,
           updated_by: access.employeeId,
         }).select('id').single()
@@ -233,7 +261,7 @@ export function OpportunityForm({
         amount_inr: amountInr,
         probability_pct: probability,
         expected_close_date: draft.expected_close_date || null,
-        owner_user_id: draft.owner_user_id,
+        owner_name: draft.owner_name.trim(),
         pm_owner_user_id: draft.pm_owner_user_id || null,
         geography: draft.geography.trim() || null,
         next_step: draft.next_step.trim() || null,
@@ -247,7 +275,7 @@ export function OpportunityForm({
       const isNew = !opportunity
       const res = isNew
         ? await supabase.from('fr_opportunities')
-            .insert({ ...payload, created_by: access.employeeId }).select().single()
+            .insert({ ...payload, owner_user_id: ownerId, created_by: access.employeeId }).select().single()
         : await supabase.from('fr_opportunities')
             .update(payload).eq('id', opportunity.id).select().single()
       if (res.error) throw new Error(res.error.message)
@@ -382,10 +410,10 @@ export function OpportunityForm({
             <SearchSelect
               label="Owner"
               required
-              value={draft.owner_user_id}
-              options={peopleOptions(draft.owner_user_id)}
-              placeholder="Search the team"
-              onChange={(v) => set('owner_user_id', v)}
+              freeText
+              value={draft.owner_name}
+              options={ownerSuggestions.map((n) => ({ value: n, label: n }))}
+              onChange={(v) => set('owner_name', v)}
             />
           </div>
           <div className="grow">

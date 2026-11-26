@@ -39,6 +39,12 @@ const DEFAULTS = {
 
 const SELECT_COLS = '*, fr_organisations(id, name)'
 
+/** Owner filter values for a name with no account behind it. */
+const NAME_PREFIX = 'n:'
+
+/** A value quoted for a PostgREST or() filter. */
+const pgQuote = (v: string) => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+
 /** Phones show the list a page at a time; laptops show it whole. */
 const PHONE_PAGE_SIZE = 50
 
@@ -57,6 +63,7 @@ type ExportDeal = {
   fiscal_year: string | null
   fiscal_quarter: string | null
   owner_user_id: string
+  owner_name: string | null
   geography: string | null
   next_step: string | null
   next_step_date: string | null
@@ -107,8 +114,20 @@ function OpportunitiesPage() {
   const effectiveStatus = filters.open || (isBoard ? 'open' : 'all')
   const openOnly = effectiveStatus === 'open'
 
+  // The Owner filter is a person in the tool (by id) or a name with no account.
+  const ownerPick = effectiveOwner(filters.owner, access.employeeId)
+  const ownerText = ownerPick.startsWith(NAME_PREFIX) ? ownerPick.slice(NAME_PREFIX.length) : ''
+  const ownerId = ownerText ? '' : ownerPick
+  const ownerPersonName = ownerId ? employees.find((e) => e.id === ownerId)?.name ?? '' : ''
+
+  // Every owner name on a deal, for the filter.
+  const [ownerNames, setOwnerNames] = useState<string[]>([])
+  useEffect(() => {
+    void supabase.from('fr_deal_owner_names').select('name').order('name')
+      .then(({ data }) => setOwnerNames(((data ?? []) as Array<{ name: string }>).map((r) => r.name)))
+  }, [])
+
   // Deals where the chosen owner is a collaborator count as theirs too.
-  const ownerId = effectiveOwner(filters.owner, access.employeeId)
   const [collab, setCollab] = useState<{ owner: string; ids: string[] } | null>(null)
   useEffect(() => {
     if (!ownerId) return
@@ -131,9 +150,12 @@ function OpportunitiesPage() {
     if (filters.q) q = q.ilike('name', `%${sanitizeSearch(filters.q)}%`)
     // "Mine" covers deals I own, deals handed to me as PM owner, and deals
     // I collaborate on.
+    if (ownerText) q = q.eq('owner_name', ownerText)
     if (ownerId) {
       const ids = collab?.owner === ownerId ? collab.ids : []
-      q = q.or([`owner_user_id.eq.${ownerId}`, `pm_owner_user_id.eq.${ownerId}`,
+      // Owner by the name shown, so the filter agrees with the Owner column.
+      const owns = ownerPersonName ? `owner_name.eq.${pgQuote(ownerPersonName)}` : `owner_user_id.eq.${ownerId}`
+      q = q.or([owns, `pm_owner_user_id.eq.${ownerId}`,
         ...(ids.length ? [`id.in.(${ids.join(',')})`] : [])].join(','))
     }
     if (filters.capital_category) q = q.eq('capital_category', filters.capital_category)
@@ -150,7 +172,7 @@ function OpportunitiesPage() {
     return q
   }, [
     filters.q, filters.owner, filters.capital_category, filters.deal_category,
-    filters.fy, filters.quarter, openOnly, stages, ownerId, collab,
+    filters.fy, filters.quarter, openOnly, stages, ownerId, ownerText, ownerPersonName, collab,
   ])
 
   const load = useCallback(async () => {
@@ -220,7 +242,7 @@ function OpportunitiesPage() {
           d.amount, d.currency, d.amount_inr, pct,
           d.amount_inr != null && pct != null ? Math.round((d.amount_inr * pct) / 100) : null,
           isoToDate(d.expected_close_date), d.fiscal_year, d.fiscal_quarter,
-          ownerOf.get(d.owner_user_id) ?? null, d.geography, d.next_step, isoToDate(d.next_step_date),
+          d.owner_name || (ownerOf.get(d.owner_user_id) ?? null), d.geography, d.next_step, isoToDate(d.next_step_date),
           d.source_detail === 'zoho' ? 'Zoho' : d.source_detail === 'sheet' ? 'Sheet' : 'Manual',
           day(d.created_at), day(d.updated_at),
         ]
@@ -234,7 +256,7 @@ function OpportunitiesPage() {
       columns: [{ header: 'Filter', width: 22 }, { header: 'Applied', width: 40 }],
       rows: [
         ['Search', filters.q || 'None'],
-        ['Owner', ownerId ? ownerOf.get(ownerId) ?? '—' : 'Anyone'],
+        ['Owner', ownerText || (ownerId ? ownerOf.get(ownerId) ?? '—' : 'Anyone')],
         ['Capital category', filters.capital_category ? labelOf(CAPITAL_CATEGORIES, filters.capital_category) : 'All'],
         ['NBD / PM', filters.deal_category || 'All'],
         ['Financial year', fyText || 'All years'],
@@ -341,7 +363,13 @@ function OpportunitiesPage() {
           label="Owner"
           width={176}
           value={ownerSelectValue(filters.owner, access.employeeId)}
-          options={[{ value: ANY_OWNER, label: 'Anyone' }, ...employees.map((e) => ({ value: e.id, label: e.name }))]}
+          options={[
+            { value: ANY_OWNER, label: 'Anyone' },
+            ...employees.map((e) => ({ value: e.id, label: e.name })),
+            ...ownerNames
+              .filter((n) => !employees.some((e) => e.name.trim().toLowerCase() === n.trim().toLowerCase()))
+              .map((n) => ({ value: NAME_PREFIX + n, label: n })),
+          ]}
           onChange={(v) => setFilter('owner', ownerParam(v, access.employeeId))}
         />
         <Select label="Category" style={{ width: 150 }} value={filters.capital_category} onChange={(e) => setFilter('capital_category', e.currentTarget.value)}>
@@ -447,7 +475,7 @@ function OpportunitiesPage() {
                     </td>
                     <td className="tn-num">{formatMoney(o.amount_inr)}</td>
                     <td className="tn-num muted">{formatDate(o.expected_close_date)}</td>
-                    <td className="muted">{ownerName(o.owner_user_id)}</td>
+                    <td className="muted">{o.owner_name || ownerName(o.owner_user_id)}</td>
                   </tr>
                 )
               })}

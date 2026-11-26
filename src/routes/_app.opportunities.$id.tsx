@@ -159,7 +159,7 @@ function OpportunityDetail() {
     )
   }
 
-  const ownerName = employees.find((e) => e.id === opp.owner_user_id)?.name ?? '—'
+  const ownerName = opp.owner_name || employees.find((e) => e.id === opp.owner_user_id)?.name || '—'
   const weighted = ((opp.amount_inr ?? 0) * (opp.probability_pct ?? 0)) / 100
 
   return (
