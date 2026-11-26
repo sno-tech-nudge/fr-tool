@@ -13,7 +13,16 @@ import { ESCALATION_RECIPIENTS, recipientLabel } from '../../lib/notifications'
  * Amber is the first nudge and red the escalation above it. A blank threshold
  * means that stage never nudges, which is how the two closed stages are meant
  * to sit: they still list who to tell, but nothing is overdue about them.
+ *
+ * Hunting (NBD) and PM deals each have their own timelines; a deal with no
+ * NBD/PM set follows Hunting.
  */
+
+type Track = 'NBD' | 'PM'
+const TRACKS: Array<{ value: Track; label: string }> = [
+  { value: 'NBD', label: 'Hunting' },
+  { value: 'PM', label: 'PM' },
+]
 
 type Row = {
   stage_id: string
@@ -44,6 +53,7 @@ export function EscalationTimelines() {
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [running, setRunning] = useState(false)
+  const [track, setTrack] = useState<Track>('NBD')
 
   // Thresholds apply to the whole team, so they are for managers (which
   // includes super admins). Everyone else can read them.
@@ -56,6 +66,7 @@ export function EscalationTimelines() {
     const { data, error: err } = await supabase
       .from('fr_stage_escalations')
       .select('stage_id, amber_days, amber_notify, red_days, red_notify')
+      .eq('deal_category', track)
     if (err) { setError(err.message); return }
 
     const stored = new Map((data ?? []).map((d) => [(d as Stored).stage_id, d as Stored]))
@@ -69,7 +80,7 @@ export function EscalationTimelines() {
         red_notify: hit.red_notify ?? [],
       } : blank(s.id)]
     })))
-  }, [stages])
+  }, [stages, track])
 
   useEffect(() => { void load() }, [load])
 
@@ -79,12 +90,13 @@ export function EscalationTimelines() {
       .from('fr_stage_escalations')
       .upsert({
         stage_id: row.stage_id,
+        deal_category: track,
         amber_days: row.amber_days === '' ? null : Number(row.amber_days),
         amber_notify: row.amber_notify,
         red_days: row.red_days === '' ? null : Number(row.red_days),
         red_notify: row.red_notify,
         updated_by: access.employeeId,
-      }, { onConflict: 'stage_id' })
+      }, { onConflict: 'stage_id,deal_category' })
     setSavingId(null)
     if (err) { toast.error(err.message); void load(); return }
   }
@@ -137,6 +149,13 @@ export function EscalationTimelines() {
 
   return (
     <div className="stack">
+      <div className="viewswitch" style={{ alignSelf: 'flex-start' }}>
+        {TRACKS.map((t) => (
+          <button key={t.value} data-active={track === t.value} onClick={() => setTrack(t.value)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
       <div className="tablewrap">
         <table className="table">
           <thead>

@@ -106,7 +106,7 @@ function displayValue(
   if (f.type === 'date') return <span className="tn-num">{formatDate(String(v))}</span>
   if (f.type === 'number') return <span className="tn-num">{String(v)}</span>
   if (f.type === 'tags') return Array.isArray(v) ? v.join(', ') : String(v)
-  if (f.type === 'json') return <span className="tn-num">{JSON.stringify(v)}</span>
+  if (f.type === 'json') return <span className="tn-num" style={{ overflowWrap: 'anywhere' }}>{JSON.stringify(v)}</span>
   if (f.type === 'fk') {
     const opt = fkOptions[f.key]?.find((o) => o.value === String(v))
     return opt ? opt.label : <span className="faint">{String(v)}</span>
@@ -204,6 +204,7 @@ export function PicklistEditor({ spec, canEdit }: { spec: PicklistSpec; canEdit:
     setRows(null)
     setLoadError(null)
     let q = supabase.from(spec.table).select('*')
+    if (spec.hiddenRows) q = q.not(spec.hiddenRows.column, 'in', `(${spec.hiddenRows.values.join(',')})`)
     for (const o of spec.orderBy) q = q.order(o.column, { ascending: o.ascending ?? true })
     const { data, error } = await q
     if (error) { setLoadError(error.message); setRows([]); return }

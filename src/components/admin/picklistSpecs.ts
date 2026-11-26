@@ -38,6 +38,8 @@ export type PicklistSpec = {
   fields: FieldSpec[]
   /** Reference rows the module depends on — block delete, allow deactivate. */
   deleteProtected?: boolean
+  /** Rows edited on their own page, left out of this list. */
+  hiddenRows?: { column: string; values: string[] }
 }
 
 const ACTIVE: FieldSpec = { key: 'is_active', label: 'Active', type: 'boolean' }
@@ -260,6 +262,8 @@ export const PICKLIST_SPECS: PicklistSpec[] = [
     title: 'Module settings',
     description: 'Values are JSON. Thresholds here drive staleness flags, reminders and renewal auto-creation.',
     orderBy: [{ column: 'key' }],
+    // Organisation health rules have their own tab.
+    hiddenRows: { column: 'key', values: ['org_health_rules'] },
     fields: [
       { key: 'key', label: 'Key', type: 'text', required: true, immutable: true },
       { key: 'value', label: 'Value', type: 'json', required: true },
