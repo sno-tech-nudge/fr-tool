@@ -262,8 +262,8 @@ export const PICKLIST_SPECS: PicklistSpec[] = [
     title: 'Module settings',
     description: 'Values are JSON. Thresholds here drive staleness flags, reminders and renewal auto-creation.',
     orderBy: [{ column: 'key' }],
-    // Organisation health rules have their own tab.
-    hiddenRows: { column: 'key', values: ['org_health_rules'] },
+    // Health rules have their own tab; who records receipts is no longer a choice.
+    hiddenRows: { column: 'key', values: ['org_health_rules', 'payments_finance_only'] },
     fields: [
       { key: 'key', label: 'Key', type: 'text', required: true, immutable: true },
       { key: 'value', label: 'Value', type: 'json', required: true },

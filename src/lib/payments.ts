@@ -18,18 +18,6 @@ export async function loadFinanceOnly(): Promise<boolean> {
   return cached
 }
 
-/** Saves the switch; returns the stored value. */
-export async function saveFinanceOnly(next: boolean): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('fr_settings')
-    .upsert({ key: FINANCE_ONLY_KEY, value: next }, { onConflict: 'key' })
-    .select('value')
-    .single()
-  if (error) throw new Error(error.message)
-  cached = (data as { value: unknown }).value === true
-  return cached
-}
-
 export function usePaymentAccess() {
   const access = useAccess()
   const [financeOnly, setFinanceOnly] = useState<boolean | null>(cached)
