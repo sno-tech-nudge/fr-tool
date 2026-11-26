@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -24,7 +24,7 @@ const DEFAULTS = { q: '', donor_type: '', relationship_status: '', owner: '', pa
 const SELECT_COLS =
   'id, name, normalized_name, website_domain, donor_type, segment, geography_city, ' +
   'geography_state, geography_country, csr_budget_annual_inr, csr_focus_areas, ' +
-  'relationship_status, relationship_owner_user_id, confidential, description, notes'
+  'relationship_status, relationship_owner_user_id, relationship_owner_name, confidential, description, notes'
 
 function OrganisationsPage() {
   useRememberFilters('companies')
@@ -39,6 +39,22 @@ function OrganisationsPage() {
 
   const page = Math.max(1, Number(filters.page) || 1)
 
+  // The owner filter is a name; a link saved before names holds a person's id.
+  const ownerFilter = /^[0-9a-f-]{36}$/i.test(filters.owner)
+    ? employees.find((e) => e.id === filters.owner)?.name ?? ''
+    : filters.owner
+  const [ownerNames, setOwnerNames] = useState<string[]>([])
+  useEffect(() => {
+    void supabase.from('fr_org_owner_names').select('name').then(({ data }) =>
+      setOwnerNames(((data ?? []) as Array<{ name: string }>).map((r) => r.name)))
+  }, [])
+  const ownerOptions = useMemo(() => {
+    const team = employees.map((e) => e.name)
+    const seen = new Set(team.map((n) => n.toLowerCase()))
+    const others = ownerNames.filter((n) => !seen.has(n.toLowerCase())).sort((a, b) => a.localeCompare(b))
+    return [{ value: '', label: 'Anyone' }, ...[...team, ...others].map((n) => ({ value: n, label: n }))]
+  }, [employees, ownerNames])
+
   const load = useCallback(async () => {
     setRows(null)
     setError(null)
@@ -51,7 +67,7 @@ function OrganisationsPage() {
     if (filters.q) q = q.ilike('name', `%${filters.q}%`)
     if (filters.donor_type) q = q.eq('donor_type', filters.donor_type)
     if (filters.relationship_status) q = q.eq('relationship_status', filters.relationship_status)
-    if (filters.owner) q = q.eq('relationship_owner_user_id', filters.owner)
+    if (ownerFilter) q = q.eq('relationship_owner_name', ownerFilter)
 
     // Explicit range, never an unbounded read — PostgREST silently caps at 1,000.
     const { data, error: err, count } = await q
@@ -61,12 +77,12 @@ function OrganisationsPage() {
     if (err) { setError(err.message); setRows([]); return }
     setRows((data ?? []) as unknown as Organisation[])
     setTotal(count ?? 0)
-  }, [filters.q, filters.donor_type, filters.relationship_status, filters.owner, page])
+  }, [filters.q, filters.donor_type, filters.relationship_status, ownerFilter, page])
 
   useEffect(() => { void load() }, [load])
 
-  const ownerName = (id: string | null) =>
-    id ? (employees.find((e) => e.id === id)?.name ?? '—') : '—'
+  const ownerName = (o: Organisation) =>
+    o.relationship_owner_name || employees.find((e) => e.id === o.relationship_owner_user_id)?.name || '—'
 
   return (
     <div className="page">
@@ -92,8 +108,8 @@ function OrganisationsPage() {
         <SearchSelect
           label="Owner"
           width={190}
-          value={filters.owner}
-          options={[{ value: '', label: 'Anyone' }, ...employees.map((e) => ({ value: e.id, label: e.name }))]}
+          value={ownerFilter}
+          options={ownerOptions}
           onChange={(v) => setFilter('owner', v)}
         />
       </div>
@@ -154,7 +170,7 @@ function OrganisationsPage() {
                         {labelOf(RELATIONSHIP_STATUSES, o.relationship_status)}
                       </Badge>
                     </td>
-                    <td className="muted">{ownerName(o.relationship_owner_user_id)}</td>
+                    <td className="muted">{ownerName(o)}</td>
                     <td className="tn-num">
                       {o.csr_budget_annual_inr ? formatMoney(o.csr_budget_annual_inr) : <span className="faint">—</span>}
                     </td>

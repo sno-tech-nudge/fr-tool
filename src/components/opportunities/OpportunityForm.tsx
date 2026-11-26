@@ -210,6 +210,7 @@ export function OpportunityForm({
           donor_type: 'corporate',
           relationship_status: 'prospect',
           relationship_owner_user_id: ownerId,
+          relationship_owner_name: draft.owner_name.trim(),
           created_by: access.employeeId,
           updated_by: access.employeeId,
         }).select('id').single()

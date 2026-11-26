@@ -137,9 +137,8 @@ function OrganisationDetail() {
     )
   }
 
-  const ownerName = org.relationship_owner_user_id
-    ? employees.find((e) => e.id === org.relationship_owner_user_id)?.name ?? '—'
-    : '—'
+  const ownerName = org.relationship_owner_name
+    || employees.find((e) => e.id === org.relationship_owner_user_id)?.name || '—'
 
   return (
     <div className="page">

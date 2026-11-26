@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Button, Checkbox, Drawer, Input, Select, Textarea, useToast } from '../ui'
+import { SearchSelect } from '../SearchSelect'
 import { DONOR_TYPES, RELATIONSHIP_STATUSES, normalizeName } from '../../lib/enums'
 import { useAccess } from '../../lib/accessContext'
 import { useEmployees } from '../../hooks/useEmployees'
@@ -21,6 +22,8 @@ export type Organisation = {
   csr_focus_areas: string[] | null
   relationship_status: string | null
   relationship_owner_user_id: string | null
+  /** The owner shown: a person in the tool or any name. */
+  relationship_owner_name?: string | null
   confidential: boolean
   description: string | null
   notes: string | null
@@ -30,13 +33,13 @@ const EMPTY = {
   name: '', website_domain: '', donor_type: 'corporate', segment: '',
   geography_city: '', geography_state: '', geography_country: 'India',
   csr_budget_annual_inr: '', csr_focus_areas: '', relationship_status: 'prospect',
-  relationship_owner_user_id: '', confidential: false, description: '', notes: '',
+  relationship_owner_name: '', confidential: false, description: '', notes: '',
 }
 
 type Draft = typeof EMPTY
 
-function toDraft(org: Organisation | null, defaultOwner: string | null): Draft {
-  if (!org) return { ...EMPTY, relationship_owner_user_id: defaultOwner ?? '' }
+function toDraft(org: Organisation | null, defaultOwner: string, nameOf: (id: string | null) => string): Draft {
+  if (!org) return { ...EMPTY, relationship_owner_name: defaultOwner }
   return {
     name: org.name ?? '',
     website_domain: org.website_domain ?? '',
@@ -48,7 +51,7 @@ function toDraft(org: Organisation | null, defaultOwner: string | null): Draft {
     csr_budget_annual_inr: org.csr_budget_annual_inr != null ? String(org.csr_budget_annual_inr) : '',
     csr_focus_areas: (org.csr_focus_areas ?? []).join(', '),
     relationship_status: org.relationship_status ?? 'prospect',
-    relationship_owner_user_id: org.relationship_owner_user_id ?? '',
+    relationship_owner_name: org.relationship_owner_name || nameOf(org.relationship_owner_user_id),
     confidential: org.confidential ?? false,
     description: org.description ?? '',
     notes: org.notes ?? '',
@@ -77,13 +80,27 @@ export function OrganisationForm({
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [busy, setBusy] = useState(false)
   const [dupes, setDupes] = useState<Array<{ id: string; name: string }>>([])
+  const [ownerNames, setOwnerNames] = useState<string[]>([])
+  // Read through a ref so the staff list arriving does not reset the form.
+  const employeesRef = useRef(employees)
+  employeesRef.current = employees
 
   useEffect(() => {
-    if (open) {
-      setDraft(toDraft(organisation, access.employeeId))
-      setDupes([])
-    }
-  }, [open, organisation, access.employeeId])
+    if (!open) return
+    const nameOf = (id: string | null) => employeesRef.current.find((e) => e.id === id)?.name ?? ''
+    setDraft(toDraft(organisation, access.employeeName ?? '', nameOf))
+    setDupes([])
+    void supabase.from('fr_org_owner_names').select('name').then(({ data }) =>
+      setOwnerNames(((data ?? []) as Array<{ name: string }>).map((r) => r.name)))
+  }, [open, organisation, access.employeeName])
+
+  // People in the tool first, then names that only appear as owners.
+  const ownerSuggestions = useMemo(() => {
+    const team = employees.map((e) => e.name)
+    const seen = new Set(team.map((n) => n.toLowerCase()))
+    const others = ownerNames.filter((n) => !seen.has(n.toLowerCase())).sort((a, b) => a.localeCompare(b))
+    return [...team, ...others]
+  }, [employees, ownerNames])
 
   const normalized = useMemo(() => normalizeName(draft.name), [draft.name])
 
@@ -110,7 +127,10 @@ export function OrganisationForm({
 
   async function save() {
     if (!draft.name.trim()) { toast.error('Name is required.'); return }
-    if (!draft.relationship_owner_user_id) { toast.error('Pick a relationship owner.'); return }
+    const ownerName = draft.relationship_owner_name.trim()
+    if (!ownerName) { toast.error('Add an owner.'); return }
+    const ownerId = employees.find((e) => e.name.toLowerCase() === ownerName.toLowerCase())?.id
+      ?? access.employeeId
     setBusy(true)
 
     const payload = {
@@ -126,7 +146,7 @@ export function OrganisationForm({
         ? draft.csr_focus_areas.split(',').map((s) => s.trim()).filter(Boolean)
         : null,
       relationship_status: draft.relationship_status || null,
-      relationship_owner_user_id: draft.relationship_owner_user_id,
+      relationship_owner_name: ownerName,
       confidential: draft.confidential,
       description: draft.description.trim() || null,
       notes: draft.notes.trim() || null,
@@ -137,7 +157,7 @@ export function OrganisationForm({
     const res = isNew
       ? await supabase
           .from('fr_organisations')
-          .insert({ ...payload, created_by: access.employeeId })
+          .insert({ ...payload, relationship_owner_user_id: ownerId, created_by: access.employeeId })
           .select()
           .single()
       : await supabase
@@ -206,15 +226,14 @@ export function OrganisationForm({
           </div>
         </div>
 
-        <Select
+        <SearchSelect
           label="Relationship owner"
           required
-          value={draft.relationship_owner_user_id}
-          onChange={(e) => set('relationship_owner_user_id', e.currentTarget.value)}
-        >
-          <option value="">Select an owner</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-        </Select>
+          freeText
+          value={draft.relationship_owner_name}
+          options={ownerSuggestions.map((n) => ({ value: n, label: n }))}
+          onChange={(v) => set('relationship_owner_name', v)}
+        />
 
         <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
           <div className="grow">

@@ -82,24 +82,32 @@ async function readAll<T>(build: (from: number, to: number) => PromiseLike<{ dat
   }
 }
 
-/** Orgs with an open deal or an active grant — optionally only one owner's. */
-async function liveOrgIds(ownerId?: string): Promise<Set<string>> {
-  const [opps, grants] = await Promise.all([
+/**
+ * Orgs someone in the tool follows: an open deal, an active grant, or a
+ * company owned by a person in the tool — optionally only one person's.
+ * Deals and companies go by the owner name shown in the app.
+ */
+async function liveOrgIds(owner?: { id: string; name: string }): Promise<Set<string>> {
+  const { data: staff } = await admin.from('employees').select('name').eq('is_active', true)
+  const names = owner ? [owner.name] : (staff ?? []).map((e: { name: string }) => e.name)
+  const [opps, grants, owned] = await Promise.all([
     readAll<{ organisation_id: string }>((a, b) => {
       let q = admin.from('fr_opportunities')
         .select('organisation_id, fr_pipeline_stages!inner(terminal_type)')
         .is('deleted_at', null).is('fr_pipeline_stages.terminal_type', null)
-      if (ownerId) q = q.eq('owner_user_id', ownerId)
+      if (owner) q = q.eq('owner_name', owner.name)
       return q.range(a, b)
     }),
     readAll<{ organisation_id: string }>((a, b) => {
       let q = admin.from('fr_grants').select('organisation_id')
         .is('deleted_at', null).eq('status', 'active')
-      if (ownerId) q = q.eq('owner_user_id', ownerId)
+      if (owner) q = q.eq('owner_user_id', owner.id)
       return q.range(a, b)
     }),
+    readAll<{ id: string }>((a, b) => admin.from('fr_organisations').select('id')
+      .is('deleted_at', null).in('relationship_owner_name', names).range(a, b)),
   ])
-  return new Set([...opps, ...grants].map((r) => r.organisation_id).filter(Boolean))
+  return new Set([...opps, ...grants].map((r) => r.organisation_id).concat(owned.map((o) => o.id)).filter(Boolean))
 }
 
 const isStale = (o: Org) =>
@@ -378,14 +386,14 @@ Deno.serve(async (req) => {
 
   const authorization = req.headers.get('Authorization') ?? ''
   const isService = authorization === `Bearer ${SERVICE_KEY}`
-  let employee: { id: string; erp_role: string } | null = null
+  let employee: { id: string; name: string; erp_role: string } | null = null
 
   if (!isService) {
     const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authorization } } })
     const { data: allowed } = await asUser.rpc('is_fr_authorised')
     if (allowed !== true) return json(403, { error: 'You do not have access to this module.' })
     const { data: u } = await asUser.auth.getUser()
-    const { data: e } = await admin.from('employees').select('id, erp_role')
+    const { data: e } = await admin.from('employees').select('id, name, erp_role')
       .ilike('email', u.user?.email ?? '').maybeSingle()
     employee = e
     if (!employee) return json(403, { error: 'No employee record matches your sign-in.' })
@@ -402,7 +410,7 @@ Deno.serve(async (req) => {
   // ---- the caller's own now, everyone else's in the background ----
   if (mode === 'mine') {
     if (!employee) return json(400, { error: 'mine needs a signed-in user.' })
-    const [{ stale }, mine] = await Promise.all([staleIn('live'), liveOrgIds(employee.id)])
+    const [{ stale }, mine] = await Promise.all([staleIn('live'), liveOrgIds(employee)])
     const own = stale.filter((o) => mine.has(o.id)).slice(0, MAX_ORGS)
     const r = await runBatch(own)
     const background = stale.length - own.length
