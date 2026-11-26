@@ -8,6 +8,7 @@ import {
 import { formatDate } from '../../lib/format'
 import type { FieldSpec, PicklistSpec } from './picklistSpecs'
 import { invalidatePipelineStages } from '../../hooks/usePipelineStages'
+import { FxRefreshButton } from './FxRefreshButton'
 
 type Row = Record<string, unknown>
 type Draft = Record<string, string>
@@ -310,12 +311,15 @@ export function PicklistEditor({ spec, canEdit }: { spec: PicklistSpec; canEdit:
           <h2 className="page__title">{spec.title}</h2>
         </div>
         {canEdit && !adding ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+          {spec.table === 'fr_fx_rates' ? <FxRefreshButton onDone={() => void load()} /> : null}
           <Button
             iconLeft={<Plus size={15} />}
             onClick={() => { setDraft(toDraft(spec, null)); setAdding(true); setEditingId(null) }}
           >
             Add
           </Button>
+          </div>
         ) : null}
       </div>
 

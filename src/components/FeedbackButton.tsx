@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouterState } from '@tanstack/react-router'
 import { Bug, ChevronLeft, Lightbulb, MessageSquarePlus, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -19,8 +20,8 @@ const COPY: Record<Kind, { title: string; prompt: string }> = {
  * (read by super admins under Configuration → Feedback) together with who sent
  * it and which page they were on, so reports arrive with their context.
  *
- * The panel opens beside the sidebar, fixed to the viewport, so the sidebar's
- * own scrolling cannot clip it and it never covers the page's buttons.
+ * The panel opens beside the sidebar, rendered on <body>: the sticky sidebar is
+ * its own stacking layer, so a panel inside it would sit behind the page.
  *
  * Hide it for everyone by setting VITE_FEEDBACK_BUTTON=off at build time, or
  * remove the <FeedbackButton /> line from the sidebar.
@@ -35,6 +36,7 @@ export function FeedbackButton() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const box = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   // Where the panel sits: just right of the sidebar, its foot level with the button's.
   const [pos, setPos] = useState<{ left: number; bottom: number } | null>(null)
@@ -49,7 +51,8 @@ export function FeedbackButton() {
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (!box.current?.contains(t) && !panel.current?.contains(t)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('mousedown', onDown)
@@ -92,8 +95,8 @@ export function FeedbackButton() {
 
   return (
     <div className="feedback" ref={box}>
-      {open ? (
-        <div className="feedback__panel" role="dialog" aria-label="Send feedback" style={pos ?? undefined}>
+      {open ? createPortal(
+        <div ref={panel} className="feedback__panel" role="dialog" aria-label="Send feedback" style={pos ?? undefined}>
           {kind === null ? (
             <>
               <div className="feedback__head">
@@ -123,14 +126,14 @@ export function FeedbackButton() {
                 value={message}
                 onChange={(e) => setMessage(e.currentTarget.value)}
               />
-              <p className="feedback__meta">Sent with your name, this page and your browser details.</p>
               <div className="feedback__actions">
                 <Button variant="ghost" size="sm" onClick={close} disabled={busy}>Cancel</Button>
                 <Button size="sm" onClick={() => void send()} disabled={busy}>{busy ? 'Sending…' : 'Send'}</Button>
               </div>
             </>
           )}
-        </div>
+        </div>,
+        document.body,
       ) : null}
       <button
         ref={trigger}

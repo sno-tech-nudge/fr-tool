@@ -176,7 +176,7 @@ export const PICKLIST_SPECS: PicklistSpec[] = [
     tab: 'FX rates',
     title: 'FX rates',
     description:
-      'Rate is INR per 1 unit of the currency. Seeded statically — there is no auto-fetch. Only USD is confirmed; the rest need finance sign-off.',
+      'Rate is INR per 1 unit of the currency. Refresh rates adds the day\'s rate for every active currency; older rates and manual ones are kept.',
     orderBy: [{ column: 'rate_date', ascending: false }, { column: 'currency_code' }],
     fields: [
       { key: 'rate_date', label: 'Date', type: 'date', required: true },
