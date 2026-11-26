@@ -114,7 +114,7 @@ export function NotificationsRail() {
 
   return (
     <HomeSection
-      title="Notifications"
+      title="Reminders"
       meta={unread > 0 ? <Badge tone="brown">{unread}</Badge> : null}
       action={
         <div className="row" style={{ gap: 'var(--space-3)' }}>
@@ -136,7 +136,7 @@ export function NotificationsRail() {
     >
       <ConfirmDialog
         open={confirmAll}
-        title={`Dismiss all ${total} notifications?`}
+        title={`Dismiss all ${total} reminders?`}
         confirmLabel="Dismiss all"
         busy={clearing}
         onConfirm={() => void dismissAll()}
@@ -149,7 +149,7 @@ export function NotificationsRail() {
       ) : error ? (
         <div className="card">
           <EmptyState
-            title="Notifications are not switched on"
+            title="Reminders are not switched on"
             body={`${error} — the fr_notifications table may not exist yet.`}
           />
         </div>
@@ -165,7 +165,7 @@ export function NotificationsRail() {
           <table className="table">
             <thead>
               <tr>
-                <th>Notification</th>
+                <th>Reminder</th>
                 <th>Details</th>
                 <th style={{ width: '90px' }}>Level</th>
                 <th style={{ width: '170px' }}>When</th>

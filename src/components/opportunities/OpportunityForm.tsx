@@ -12,6 +12,8 @@ import { OrganisationPicker } from '../organisations/OrganisationPicker'
 import { DealContactPicker, type NewContact } from '../contacts/DealContactPicker'
 import { DictationTextarea } from '../DictationTextarea'
 import { notifyMentions, useFrPeople } from '../../lib/mentions'
+import { SearchSelect } from '../SearchSelect'
+import { useFrTeam } from '../../hooks/useFrTeam'
 
 export type Opportunity = {
   id: string
@@ -98,6 +100,13 @@ export function OpportunityForm({
   const access = useAccess()
   const people = useFrPeople()
   const { employees } = useEmployees()
+  const { team } = useFrTeam()
+  /** The fundraising team, plus whoever holds the field now if they've left it. */
+  const peopleOptions = (current: string) => {
+    const list = team.map((t) => ({ value: t.id, label: t.name }))
+    const held = current && !team.some((t) => t.id === current) ? employees.find((e) => e.id === current) : null
+    return held ? [{ value: held.id, label: held.name }, ...list] : list
+  }
   const { stages } = usePipelineStages()
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
@@ -370,16 +379,22 @@ export function OpportunityForm({
             />
           </div>
           <div className="grow">
-            <Select label="Owner" required value={draft.owner_user_id} onChange={(e) => set('owner_user_id', e.currentTarget.value)}>
-              <option value="">Select an owner</option>
-              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </Select>
+            <SearchSelect
+              label="Owner"
+              required
+              value={draft.owner_user_id}
+              options={peopleOptions(draft.owner_user_id)}
+              placeholder="Search the team"
+              onChange={(v) => set('owner_user_id', v)}
+            />
           </div>
           <div className="grow">
-            <Select label="PM owner" value={draft.pm_owner_user_id} onChange={(e) => set('pm_owner_user_id', e.currentTarget.value)}>
-              <option value="">—</option>
-              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </Select>
+            <SearchSelect
+              label="PM owner"
+              value={draft.pm_owner_user_id}
+              options={[{ value: '', label: '—' }, ...peopleOptions(draft.pm_owner_user_id)]}
+              onChange={(v) => set('pm_owner_user_id', v)}
+            />
           </div>
         </div>
 

@@ -19,6 +19,8 @@ import { formatAmount, formatDate, formatDateTime, formatMoney } from '../lib/fo
 import { useAccess } from '../lib/accessContext'
 import { useEmployees } from '../hooks/useEmployees'
 import { usePipelineStages, type Stage } from '../hooks/usePipelineStages'
+import { TeamPicker } from '../components/TeamPicker'
+import { useFrTeam } from '../hooks/useFrTeam'
 
 export const Route = createFileRoute('/_app/opportunities/$id')({ component: OpportunityDetail })
 
@@ -679,7 +681,7 @@ type Collaborator = {
 function CollaboratorsTab({ opportunityId }: { opportunityId: string }) {
   const toast = useToast()
   const access = useAccess()
-  const { employees } = useEmployees()
+  const { team } = useFrTeam()
   const [rows, setRows] = useState<Collaborator[] | null>(null)
   const [userId, setUserId] = useState('')
   const [busy, setBusy] = useState(false)
@@ -731,12 +733,15 @@ function CollaboratorsTab({ opportunityId }: { opportunityId: string }) {
       <div className="card">
         <div className="row row--wrap" style={{ alignItems: 'flex-end', gap: 'var(--space-4)' }}>
           <div className="grow" style={{ minWidth: 220 }}>
-            <Select label="Add collaborator" value={userId} onChange={(e) => setUserId(e.currentTarget.value)}>
-              <option value="">Select someone</option>
-              {employees.filter((e) => !taken.has(e.id)).map((e) => (
-                <option key={e.id} value={e.id}>{e.name} · {e.email}</option>
-              ))}
-            </Select>
+            <div className="field">
+              <span className="field__label">Add collaborator</span>
+              <TeamPicker
+                people={team.filter((p) => !taken.has(p.id))}
+                value={userId || null}
+                onChange={(id) => setUserId(id ?? '')}
+                label="Add collaborator"
+              />
+            </div>
           </div>
           <Button onClick={() => void add()} disabled={busy}>{busy ? 'Adding…' : 'Add'}</Button>
         </div>
@@ -746,7 +751,7 @@ function CollaboratorsTab({ opportunityId }: { opportunityId: string }) {
         <div className="card">
           <EmptyState
             title="No collaborators"
-            body="Collaborators can see and work on this deal alongside its owner."
+            body="Collaborators work on this deal alongside its owner and get its reminders."
           />
         </div>
       ) : (

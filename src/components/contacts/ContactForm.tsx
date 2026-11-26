@@ -6,7 +6,6 @@ import {
 } from '../ui'
 import { SENIORITIES } from '../../lib/enums'
 import { useAccess } from '../../lib/accessContext'
-import { useEmployees } from '../../hooks/useEmployees'
 import { OrganisationPicker } from '../organisations/OrganisationPicker'
 import { DocumentLink } from '../DocumentLink'
 import { DictationTextarea } from '../DictationTextarea'
@@ -24,6 +23,8 @@ export type Contact = {
   is_primary: boolean
   is_individual_donor: boolean
   relationship_owner_user_id: string | null
+  /** The owner as written: Zoho's name for imported contacts, else whoever added it. */
+  relationship_owner_name: string | null
   confidential: boolean
   birthday: string | null
   personal_notes: string | null
@@ -45,7 +46,7 @@ export type ContactPrefill = {
 const EMPTY = {
   organisation_id: '', full_name: '', designation: '', seniority: '', email: '', phone: '',
   linkedin_url: '', is_primary: false, is_individual_donor: false,
-  relationship_owner_user_id: '', confidential: false, birthday: '', personal_notes: '', notes: '',
+  relationship_owner_user_id: '', relationship_owner_name: '', confidential: false, birthday: '', personal_notes: '', notes: '',
 }
 type Draft = typeof EMPTY
 
@@ -54,12 +55,14 @@ function toDraft(
   lockedOrgId: string | null,
   defaultOwner: string | null,
   prefill: ContactPrefill | null,
+  defaultOwnerName: string | null = null,
 ): Draft {
   if (!c) {
     return {
       ...EMPTY,
       organisation_id: lockedOrgId ?? '',
       relationship_owner_user_id: defaultOwner ?? '',
+      relationship_owner_name: defaultOwnerName ?? '',
       ...prefill,
     }
   }
@@ -74,6 +77,7 @@ function toDraft(
     is_primary: c.is_primary ?? false,
     is_individual_donor: c.is_individual_donor ?? false,
     relationship_owner_user_id: c.relationship_owner_user_id ?? '',
+    relationship_owner_name: c.relationship_owner_name ?? '',
     confidential: c.confidential ?? false,
     birthday: c.birthday ?? '',
     personal_notes: c.personal_notes ?? '',
@@ -103,14 +107,13 @@ export function ContactForm({
   const toast = useToast()
   const access = useAccess()
   const people = useFrPeople()
-  const { employees } = useEmployees()
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
-    if (open) setDraft(toDraft(contact, lockedOrganisationId, access.employeeId, prefill))
+    if (open) setDraft(toDraft(contact, lockedOrganisationId, access.employeeId, prefill, access.employeeName))
     // `prefill` is a fresh object each render, so it is deliberately not a
     // dependency — it would reset the form under the person as they type.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,6 +141,7 @@ export function ContactForm({
       is_primary: draft.is_primary,
       is_individual_donor: draft.is_individual_donor,
       relationship_owner_user_id: draft.relationship_owner_user_id || null,
+      relationship_owner_name: draft.relationship_owner_name.trim() || null,
       confidential: draft.confidential,
       birthday: draft.birthday || null,
       personal_notes: draft.personal_notes.trim() || null,
@@ -288,14 +292,11 @@ export function ContactForm({
 
           <div className="row" style={{ gap: 'var(--space-4)', alignItems: 'flex-start' }}>
             <div className="grow">
-              <Select
+              <Input
                 label="Relationship owner"
-                value={draft.relationship_owner_user_id}
-                onChange={(e) => set('relationship_owner_user_id', e.currentTarget.value)}
-              >
-                <option value="">—</option>
-                {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </Select>
+                value={draft.relationship_owner_name}
+                onChange={(e) => set('relationship_owner_name', e.currentTarget.value)}
+              />
             </div>
             <div className="grow">
               <Input

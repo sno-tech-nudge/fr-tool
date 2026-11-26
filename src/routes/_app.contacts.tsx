@@ -12,6 +12,7 @@ import { SENIORITIES, labelOf } from '../lib/enums'
 import { useUrlFilters } from '../hooks/useUrlFilters'
 import { sanitizeSearch } from '../lib/query'
 import { restoreFilters, useRememberFilters } from '../lib/rememberedFilters'
+import { SearchSelect } from '../components/SearchSelect'
 
 export const Route = createFileRoute('/_app/contacts')({
   beforeLoad: (opts) => restoreFilters('contacts', '/contacts', opts, ['contact']),
@@ -19,7 +20,7 @@ export const Route = createFileRoute('/_app/contacts')({
 })
 
 const PAGE_SIZE = 50
-const DEFAULTS = { q: '', seniority: '', individual: '', page: '1' }
+const DEFAULTS = { q: '', seniority: '', individual: '', owner: '', page: '1' }
 
 type ContactRow = Contact & {
   fr_organisations: { id: string; name: string } | null
@@ -53,6 +54,12 @@ function leftoverNotes(f: ContactCardFields, orgLinked: boolean): string {
 function ContactsPage() {
   useRememberFilters('contacts', ['contact'])
   const { filters, setFilter } = useUrlFilters(DEFAULTS)
+  // Owner names as written on contacts, for the filter (counted in the database).
+  const [ownerNames, setOwnerNames] = useState<string[]>([])
+  useEffect(() => {
+    void supabase.from('fr_contact_owner_names').select('name').order('name')
+      .then(({ data }) => setOwnerNames(((data ?? []) as Array<{ name: string }>).map((r) => r.name)))
+  }, [])
 
   const [rows, setRows] = useState<ContactRow[] | null>(null)
   const [total, setTotal] = useState(0)
@@ -81,6 +88,7 @@ function ContactsPage() {
     }
     if (filters.seniority) q = q.eq('seniority', filters.seniority)
     if (filters.individual === 'yes') q = q.eq('is_individual_donor', true)
+    if (filters.owner) q = q.eq('relationship_owner_name', filters.owner)
 
     const { data, error: err, count } = await q
       .order('full_name')
@@ -89,7 +97,7 @@ function ContactsPage() {
     if (err) { setError(err.message); setRows([]); return }
     setRows((data ?? []) as unknown as ContactRow[])
     setTotal(count ?? 0)
-  }, [filters.q, filters.seniority, filters.individual, page])
+  }, [filters.q, filters.seniority, filters.individual, filters.owner, page])
 
   useEffect(() => { void load() }, [load])
 
@@ -174,6 +182,13 @@ function ContactsPage() {
           <option value="">Everyone</option>
           <option value="yes">Individual donors</option>
         </Select>
+        <SearchSelect
+          label="Relationship owner"
+          width={200}
+          value={filters.owner}
+          options={[{ value: '', label: 'Anyone' }, ...ownerNames.map((n) => ({ value: n, label: n }))]}
+          onChange={(v) => setFilter('owner', v)}
+        />
       </div>
 
       {error ? (

@@ -9,7 +9,7 @@ export type SearchOption = { value: string; label: string }
  * and goes back to the chosen option if you leave without picking.
  */
 export function SearchSelect({
-  label, value, options, onChange, width, placeholder,
+  label, value, options, onChange, width, placeholder, required,
 }: {
   label: string
   value: string
@@ -17,6 +17,7 @@ export function SearchSelect({
   onChange: (value: string) => void
   width?: number
   placeholder?: string
+  required?: boolean
 }) {
   const id = useId()
   const chosen = options.find((o) => o.value === value) ?? null
@@ -50,7 +51,7 @@ export function SearchSelect({
 
   return (
     <div className="field" style={width ? { width } : undefined}>
-      <label className="field__label" htmlFor={id}>{label}</label>
+      <label className="field__label" htmlFor={id}>{label}{required ? <span className="field__req"> *</span> : null}</label>
       <div style={{ position: 'relative' }}>
         <input
           id={id}

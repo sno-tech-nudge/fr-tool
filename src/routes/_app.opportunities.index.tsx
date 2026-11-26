@@ -107,6 +107,20 @@ function OpportunitiesPage() {
   const effectiveStatus = filters.open || (isBoard ? 'open' : 'all')
   const openOnly = effectiveStatus === 'open'
 
+  // Deals where the chosen owner is a collaborator count as theirs too.
+  const ownerId = effectiveOwner(filters.owner, access.employeeId)
+  const [collab, setCollab] = useState<{ owner: string; ids: string[] } | null>(null)
+  useEffect(() => {
+    if (!ownerId) return
+    let active = true
+    void supabase.from('fr_opportunity_collaborators').select('opportunity_id').eq('user_id', ownerId)
+      .then(({ data }) => {
+        if (active) setCollab({ owner: ownerId, ids: ((data ?? []) as Array<{ opportunity_id: string }>).map((r) => r.opportunity_id) })
+      })
+    return () => { active = false }
+  }, [ownerId])
+  const collabReady = !ownerId || collab?.owner === ownerId
+
   /**
    * The pipeline query with every filter applied. The board and the Excel
    * export both start from it, so an export is exactly what the filters show.
@@ -115,9 +129,13 @@ function OpportunitiesPage() {
     let q = supabase.from('fr_opportunities').select(cols).is('deleted_at', null)
 
     if (filters.q) q = q.ilike('name', `%${sanitizeSearch(filters.q)}%`)
-    const owner = effectiveOwner(filters.owner, access.employeeId)
-    // "Mine" covers deals I own and deals handed to me as PM owner.
-    if (owner) q = q.or(`owner_user_id.eq.${owner},pm_owner_user_id.eq.${owner}`)
+    // "Mine" covers deals I own, deals handed to me as PM owner, and deals
+    // I collaborate on.
+    if (ownerId) {
+      const ids = collab?.owner === ownerId ? collab.ids : []
+      q = q.or([`owner_user_id.eq.${ownerId}`, `pm_owner_user_id.eq.${ownerId}`,
+        ...(ids.length ? [`id.in.(${ids.join(',')})`] : [])].join(','))
+    }
     if (filters.capital_category) q = q.eq('capital_category', filters.capital_category)
     if (filters.deal_category) q = q.eq('deal_category', filters.deal_category)
     const fys = parseFyList(filters.fy)
@@ -132,7 +150,7 @@ function OpportunitiesPage() {
     return q
   }, [
     filters.q, filters.owner, filters.capital_category, filters.deal_category,
-    filters.fy, filters.quarter, openOnly, stages, access.employeeId,
+    filters.fy, filters.quarter, openOnly, stages, ownerId, collab,
   ])
 
   const load = useCallback(async () => {
@@ -144,7 +162,7 @@ function OpportunitiesPage() {
     setCards((data ?? []) as unknown as BoardCard[])
   }, [filteredQuery])
 
-  useEffect(() => { if (!stagesLoading) void load() }, [load, stagesLoading])
+  useEffect(() => { if (!stagesLoading && collabReady) void load() }, [load, stagesLoading, collabReady])
 
   /* ---- export ---- */
 
@@ -209,7 +227,6 @@ function OpportunitiesPage() {
       }),
     }
 
-    const ownerId = effectiveOwner(filters.owner, access.employeeId)
     const fyText = parseFyList(filters.fy).join(', ')
     const quarterText = parseFyList(filters.quarter).join(', ')
     const applied: SheetSpec = {
